@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+joblib
+xgboost
+scikit-learn
+pydantic
+PyJWT
+cryptography
+openpyxl
+sqlalchemy
+psycopg2-binary
