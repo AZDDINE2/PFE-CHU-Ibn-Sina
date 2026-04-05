@@ -1,0 +1,206 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Brand */
+  --primary:       #2563EB;
+  --primary-light: #3B82F6;
+  --primary-dark:  #1D4ED8;
+  --accent:        #0EA5E9;
+
+  /* Sidebar (always dark) */
+  --sidebar-bg:      #0C1220;
+  --sidebar-border:  #1e2d45;
+  --sidebar-text:    #8B9CB3;
+  --sidebar-active:  #2563EB;
+  --sidebar-hover:   rgba(255,255,255,0.05);
+
+  /* Page (light) */
+  --bg:       #F0F4FF;
+  --surface:  #FFFFFF;
+  --border:   #E2E8F4;
+  --border-2: #CBD5E1;
+
+  /* Text */
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  /* Status */
+  --red:    #EF4444;
+  --green:  #22C55E;
+  --orange: #F59E0B;
+  --purple: #8B5CF6;
+  --teal:   #14B8A6;
+
+  /* Topbar */
+  --topbar-h: 56px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md: 0 4px 16px rgba(15,23,42,0.10), 0 2px 6px rgba(15,23,42,0.06);
+  --shadow-lg: 0 10px 40px rgba(15,23,42,0.14), 0 4px 12px rgba(15,23,42,0.08);
+
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+/* ── Dark mode overrides ─────────────────────────────── */
+html.dark {
+  --bg:       #0A0F1C;
+  --surface:  #111827;
+  --border:   #1F2937;
+  --border-2: #374151;
+
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted:     #64748B;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.25);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── App layout ────────────────────────────────────────── */
+.app-layout { display: flex; min-height: 100vh; }
+
+/* ── Topbar ────────────────────────────────────────────── */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Main content ──────────────────────────────────────── */
+main#main-content {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+}
+
+/* ── Dark mode — targeted overrides ────────────────────── */
+html.dark body   { background: var(--bg) !important; color: var(--text-primary) !important; }
+html.dark .topbar {
+  background: var(--surface) !important;
+  border-bottom-color: var(--border) !important;
+}
+html.dark .app-layout { background: var(--bg) !important; }
+
+/* Dark text defaults */
+html.dark div, html.dark span, html.dark p,
+html.dark h1, html.dark h2, html.dark h3, html.dark h4,
+html.dark td, html.dark th, html.dark label, html.dark li, html.dark a {
+  color: #CBD5E1 !important;
+}
+
+/* Preserve colored text */
+html.dark [style*="color: rgb(255, 255, 255)"],
+html.dark [style*="color: white"] { color: #fff !important; }
+html.dark [style*="color: rgb(34, 197, 94)"]  { color: #22C55E !important; }
+html.dark [style*="color: rgb(239, 68, 68)"]  { color: #EF4444 !important; }
+html.dark [style*="color: rgb(220, 38, 38)"]  { color: #DC2626 !important; }
+html.dark [style*="color: rgb(245, 158, 11)"] { color: #F59E0B !important; }
+html.dark [style*="color: rgb(217, 119, 6)"]  { color: #D97706 !important; }
+html.dark [style*="color: rgb(59, 130, 246)"] { color: #60a5fa !important; }
+html.dark [style*="color: rgb(29, 78, 216)"]  { color: #60a5fa !important; }
+html.dark [style*="color: rgb(37, 99, 235)"]  { color: #60a5fa !important; }
+html.dark [style*="color: rgb(30, 64, 175)"]  { color: #60a5fa !important; }
+html.dark [style*="color: rgb(139, 92, 246)"] { color: #a78bfa !important; }
+html.dark [style*="color: rgb(148, 163, 184)"]{ color: #94a3b8 !important; }
+
+/* Dark backgrounds */
+html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background-color: rgb(255, 255, 255)"] {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+html.dark [style*="background: rgb(248, 250, 252)"],
+html.dark [style*="background: rgb(244, 246, 251)"],
+html.dark [style*="background: rgb(244, 246, 255)"],
+html.dark [style*="background: rgb(240, 246, 255)"],
+html.dark [style*="background: rgb(241, 245, 249)"],
+html.dark [style*="background: rgb(250, 251, 252)"],
+html.dark [style*="background-color: rgb(248, 250, 252)"] {
+  background: #0A0F1C !important;
+}
+
+/* Sidebar always dark — no override needed */
+html.dark nav { box-shadow: none !important; }
+
+/* Inputs */
+html.dark input, html.dark select, html.dark textarea {
+  background: #0A0F1C !important;
+  color: #e2e8f0 !important;
+  border-color: var(--border) !important;
+}
+
+/* Tables */
+html.dark table  { background: var(--surface) !important; }
+html.dark thead  { background: #0A0F1C !important; }
+html.dark tr:nth-child(even) { background: #131b2a !important; }
+
+/* Nav active */
+html.dark nav a[style*="background: rgb(239, 246, 255)"] {
+  background: rgba(37,99,235,0.18) !important;
+  color: #60a5fa !important;
+}
+
+/* Buttons */
+html.dark button[style*="background: rgb(241, 245, 249)"],
+html.dark button[style*="background: rgb(255, 255, 255)"],
+html.dark button[style*="background: rgb(248, 250, 252)"] {
+  background: #1F2937 !important;
+  color: #94a3b8 !important;
+  border-color: var(--border) !important;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C1C9D6; border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb { background: #1F2937; }
+html.dark ::-webkit-scrollbar-track { background: #0A0F1C; }
+
+/* ── Utility classes ───────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Print ─────────────────────────────────────────────── */
+@media print {
+  nav, aside, button:not(.print-keep),
+  [class*="toggle"], [class*="collapse"], [class*="DarkMode"],
+  [class*="ExportButton"], [class*="AlertBanner"],
+  [class*="TopProgress"], [class*="LiveBadge"] { display: none !important; }
+  body, * { background: #fff !important; color: #000 !important; box-shadow: none !important; }
+  main, [id^="page-"] { width: 100% !important; margin: 0 !important; padding: 8px !important; }
+  .recharts-responsive-container { page-break-inside: avoid; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #ccc !important; padding: 4px 6px !important; font-size: 11px !important; }
+  thead { background: #f5f5f5 !important; }
+  @page { size: A4 portrait; margin: 15mm 12mm; }
+  h2, h3 { page-break-after: avoid; }
+  .page-break { page-break-before: always; }
+}
