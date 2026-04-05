@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\Azddine\\\\Desktop\\\\PFE\")",
+      "Bash(cmd.exe /c \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe -u root -e \"\"SELECT VERSION\\(\\);\"\" 2>&1\")",
+      "Bash(cmd.exe /c \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe -u root --connect-timeout=5 -e \"\"SELECT VERSION\\(\\);\"\" && echo OK || echo ECHEC\")",
+      "Bash(cmd.exe /c \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.4.7\\\\bin\\\\mysql.exe -u root --connect-timeout=5 -e \"\"SELECT VERSION\\(\\);\"\" 2>&1; echo EXIT:$?\")"
+    ]
+  }
+}
