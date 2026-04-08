@@ -505,6 +505,51 @@ def get_top_motifs():
         raise HTTPException(500, str(e))
 
 
+@app.get("/api/urgences/maladies_saisonnieres")
+def get_maladies_saisonnieres():
+    """
+    Pour chaque saison, retourne le top 5 des motifs de consultation
+    avec le nombre de cas, le taux de criticité P1 et la durée moyenne.
+    """
+    try:
+        urg = get_urg().copy()
+        if "Motif_Consultation" not in urg.columns or "Saison" not in urg.columns:
+            return []
+
+        saisons_ordre = ["Hiver", "Printemps", "Eté", "Automne"]
+        urg["Saison"] = urg["Saison"].str.replace("Été", "Eté")
+
+        result = []
+        for saison in saisons_ordre:
+            grp_saison = urg[urg["Saison"] == saison]
+            if grp_saison.empty:
+                continue
+            total_saison = len(grp_saison)
+            top_motifs = grp_saison["Motif_Consultation"].value_counts().head(5)
+            maladies = []
+            for motif, count in top_motifs.items():
+                grp_m = grp_saison[grp_saison["Motif_Consultation"] == motif]
+                p1 = round(float((grp_m["Niveau_Triage"] == "P1 - Critique").sum()) / len(grp_m) * 100, 1)
+                duree = int(grp_m["Duree_Sejour_min"].mean()) if "Duree_Sejour_min" in grp_m.columns else 0
+                hospit = round(float((grp_m["Orientation"] == "Hospitalise").sum()) / len(grp_m) * 100, 1)
+                maladies.append({
+                    "motif": str(motif),
+                    "count": int(count),
+                    "pct": round(count / total_saison * 100, 1),
+                    "p1_rate": p1,
+                    "hospit_rate": hospit,
+                    "avg_duree": duree,
+                })
+            result.append({
+                "saison": saison,
+                "total_patients": total_saison,
+                "maladies": maladies,
+            })
+        return result
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ══════════════════════════════════════════════════════════════
 # ETABLISSEMENTS
 # ══════════════════════════════════════════════════════════════
