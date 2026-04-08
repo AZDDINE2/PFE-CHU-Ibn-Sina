@@ -28,17 +28,67 @@ const RESULTAT_ICONS: Record<string, React.ReactNode> = {
   'Transfert':    <IconRefreshCw size={10} color="#8B5CF6"/>,
 };
 
+/* ── Saison SVG icons ───────────────────────────────────── */
+const IconSnowflake: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="2" x2="12" y2="22"/>
+    <path d="M17 7l-5 5-5-5"/>
+    <path d="M17 17l-5-5-5 5"/>
+    <line x1="2" y1="12" x2="22" y2="12"/>
+    <path d="M7 7l5 5 5-5" transform="rotate(90 12 12)"/>
+    <path d="M7 17l5-5 5 5" transform="rotate(90 12 12)"/>
+  </svg>
+);
+
+const IconFlower: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2a4 4 0 0 1 4 4c0 2-4 3-4 3s-4-1-4-3a4 4 0 0 1 4-4z"/>
+    <path d="M12 22a4 4 0 0 1-4-4c0-2 4-3 4-3s4 1 4 3a4 4 0 0 1-4 4z"/>
+    <path d="M2 12a4 4 0 0 1 4-4c2 0 3 4 3 4s-1 4-3 4a4 4 0 0 1-4-4z"/>
+    <path d="M22 12a4 4 0 0 1-4 4c-2 0-3-4-3-4s1-4 3-4a4 4 0 0 1 4 4z"/>
+  </svg>
+);
+
+const IconSun: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+);
+
+const IconLeaf: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+  </svg>
+);
+
+const SAISON_ICONS: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  'Hiver':     IconSnowflake,
+  'Printemps': IconFlower,
+  'Ete':       IconSun,
+  'Automne':   IconLeaf,
+};
+
 /* ── Saison config ─────────────────────────────────────── */
 /* "Ete" = valeur DB, displayed as "Été" */
 const SAISON_LABEL: Record<string, string> = {
   'Hiver': 'Hiver', 'Printemps': 'Printemps', 'Ete': 'Été', 'Automne': 'Automne',
 };
 
-const SAISON_CONFIG: Record<string, { color: string; bg: string; icon: string; months: string }> = {
-  'Hiver':     { color: '#60A5FA', bg: '#EFF6FF', icon: '❄️', months: 'Déc · Jan · Fév' },
-  'Printemps': { color: '#34D399', bg: '#ECFDF5', icon: '🌸', months: 'Mar · Avr · Mai' },
-  'Ete':       { color: '#F59E0B', bg: '#FFFBEB', icon: '☀️', months: 'Jun · Jul · Aoû' },
-  'Automne':   { color: '#F97316', bg: '#FFF7ED', icon: '🍂', months: 'Sep · Oct · Nov' },
+const SAISON_CONFIG: Record<string, { color: string; bg: string; months: string }> = {
+  'Hiver':     { color: '#60A5FA', bg: '#EFF6FF', months: 'Déc · Jan · Fév' },
+  'Printemps': { color: '#34D399', bg: '#ECFDF5', months: 'Mar · Avr · Mai' },
+  'Ete':       { color: '#F59E0B', bg: '#FFFBEB', months: 'Jun · Jul · Aoû' },
+  'Automne':   { color: '#F97316', bg: '#FFF7ED', months: 'Sep · Oct · Nov' },
 };
 
 const SAISON_CONFIG_DARK: Record<string, { color: string; bg: string }> = {
@@ -261,7 +311,7 @@ const SoinsCouts: React.FC = () => {
               background: isActive ? cfg.bg : cardBg,
               transition: 'all 0.15s',
             }}>
-              <span style={{ fontSize: 18 }}>{SAISON_CONFIG[s.saison].icon}</span>
+              {(() => { const Icon = SAISON_ICONS[s.saison]; return Icon ? <Icon size={20} color={isActive ? cfg.color : '#94A3B8'}/> : null; })()}
               <div style={{ textAlign: 'left' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? cfg.color : titleColor }}>{SAISON_LABEL[s.saison] ?? s.saison}</div>
                 <div style={{ fontSize: 10, color: labelColor }}>{SAISON_CONFIG[s.saison].months}</div>
@@ -294,7 +344,7 @@ const SoinsCouts: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}>{SAISON_CONFIG[activeSaisonData.saison].icon}</span>
+                {(() => { const Icon = SAISON_ICONS[activeSaisonData.saison]; return Icon ? <div style={{ width: 40, height: 40, borderRadius: 10, background: `${cfg.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={22} color={cfg.color}/></div> : null; })()}
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, color: cfg.color }}>{SAISON_LABEL[activeSaisonData.saison] ?? activeSaisonData.saison}</div>
                   <div style={{ fontSize: 11, color: labelColor }}>{SAISON_CONFIG[activeSaisonData.saison].months}</div>
