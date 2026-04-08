@@ -516,8 +516,9 @@ def get_maladies_saisonnieres():
         if "Motif_Consultation" not in urg.columns or "Saison" not in urg.columns:
             return []
 
-        saisons_ordre = ["Hiver", "Printemps", "Eté", "Automne"]
-        urg["Saison"] = urg["Saison"].str.replace("Été", "Eté")
+        # Normaliser toutes les variantes d'Été → "Ete" (valeur réelle en DB)
+        urg["Saison"] = urg["Saison"].str.replace("Été", "Ete").str.replace("Eté", "Ete")
+        saisons_ordre = ["Hiver", "Printemps", "Ete", "Automne"]
 
         result = []
         for saison in saisons_ordre:

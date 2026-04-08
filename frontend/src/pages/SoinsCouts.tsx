@@ -29,17 +29,22 @@ const RESULTAT_ICONS: Record<string, React.ReactNode> = {
 };
 
 /* ── Saison config ─────────────────────────────────────── */
+/* "Ete" = valeur DB, displayed as "Été" */
+const SAISON_LABEL: Record<string, string> = {
+  'Hiver': 'Hiver', 'Printemps': 'Printemps', 'Ete': 'Été', 'Automne': 'Automne',
+};
+
 const SAISON_CONFIG: Record<string, { color: string; bg: string; icon: string; months: string }> = {
   'Hiver':     { color: '#60A5FA', bg: '#EFF6FF', icon: '❄️', months: 'Déc · Jan · Fév' },
   'Printemps': { color: '#34D399', bg: '#ECFDF5', icon: '🌸', months: 'Mar · Avr · Mai' },
-  'Eté':       { color: '#F59E0B', bg: '#FFFBEB', icon: '☀️', months: 'Jun · Jul · Aoû' },
+  'Ete':       { color: '#F59E0B', bg: '#FFFBEB', icon: '☀️', months: 'Jun · Jul · Aoû' },
   'Automne':   { color: '#F97316', bg: '#FFF7ED', icon: '🍂', months: 'Sep · Oct · Nov' },
 };
 
 const SAISON_CONFIG_DARK: Record<string, { color: string; bg: string }> = {
   'Hiver':     { color: '#60A5FA', bg: 'rgba(96,165,250,0.08)'  },
   'Printemps': { color: '#34D399', bg: 'rgba(52,211,153,0.08)'  },
-  'Eté':       { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)'  },
+  'Ete':       { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)'  },
   'Automne':   { color: '#F97316', bg: 'rgba(249,115,22,0.08)'  },
 };
 
@@ -258,7 +263,7 @@ const SoinsCouts: React.FC = () => {
             }}>
               <span style={{ fontSize: 18 }}>{SAISON_CONFIG[s.saison].icon}</span>
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? cfg.color : titleColor }}>{s.saison}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? cfg.color : titleColor }}>{SAISON_LABEL[s.saison] ?? s.saison}</div>
                 <div style={{ fontSize: 10, color: labelColor }}>{SAISON_CONFIG[s.saison].months}</div>
               </div>
               <div style={{
@@ -291,7 +296,7 @@ const SoinsCouts: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 24 }}>{SAISON_CONFIG[activeSaisonData.saison].icon}</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: cfg.color }}>{activeSaisonData.saison}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: cfg.color }}>{SAISON_LABEL[activeSaisonData.saison] ?? activeSaisonData.saison}</div>
                   <div style={{ fontSize: 11, color: labelColor }}>{SAISON_CONFIG[activeSaisonData.saison].months}</div>
                 </div>
               </div>
