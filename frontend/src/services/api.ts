@@ -30,6 +30,8 @@ export interface Metrique    { modele: string; R2: number; MAE: number; RMSE: nu
 export interface SimInput    { mois: number; heure: number; jour_semaine: number; jour_ferie: number; saison: string; }
 export interface SimOutput   { prediction: number; niveau: string; couleur: string; }
 export interface TopMotif    { motif: string; count: number; pct: number; triage_principal: string; p1_rate: number; hospit_rate: number; avg_duree: number; tendance: number; }
+export interface MaladieSaison { motif: string; count: number; pct: number; p1_rate: number; hospit_rate: number; avg_duree: number; }
+export interface SaisonMaladies { saison: string; total_patients: number; maladies: MaladieSaison[]; }
 
 export const fetchKPIs            = (annees = '', orientation = '') => API.get<KPIs>(`/kpis?annees=${annees}&orientation=${orientation}`).then(r => r.data);
 export const fetchTemporel        = (annees = '2019,2020,2021,2022,2023') => API.get<TSPoint[]>(`/urgences/temporel?annees=${annees}`).then(r => r.data);
@@ -48,4 +50,5 @@ export const fetchMedicaments     = () => API.get<Medicament[]>('/soins/medicame
 export const fetchPredictions     = () => API.get<Prediction[]>('/predictions').then(r => r.data);
 export const fetchMetriques       = () => API.get<Metrique[]>('/modeles/metriques').then(r => r.data);
 export const postSimulateur       = (body: SimInput) => API.post<SimOutput>('/simulateur', body).then(r => r.data);
-export const fetchTopMotifs       = () => API.get<TopMotif[]>('/urgences/top_motifs').then(r => r.data);
+export const fetchTopMotifs           = () => API.get<TopMotif[]>('/urgences/top_motifs').then(r => r.data);
+export const fetchMaladiesSaisonnieres = () => API.get<SaisonMaladies[]>('/urgences/maladies_saisonnieres').then(r => r.data);
