@@ -32,7 +32,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/temporel':       'Analyse Temporelle',
   '/etablissements': 'Établissements',
   '/predictions':    'Prédictions IA',
-  '/soins':          'Soins & Coûts',
+  '/soins':          'Soins Médicaux',
   '/carte':          'Carte Géographique',
   '/tableau':        'Données Brutes',
   '/alertes':        'Alertes & Seuils',
