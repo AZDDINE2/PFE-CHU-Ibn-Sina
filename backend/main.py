@@ -1986,6 +1986,118 @@ def get_lits_stats(creds: HTTPAuthorizationCredentials = Depends(security)):
     except Exception as e:
         raise HTTPException(500, str(e))
 
+@app.get("/api/predictions/planification")
+def predict_planification(date: str, creds: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Pour une date donnée, prédit:
+    - Nombre de patients attendus (via historique par jour_semaine + mois)
+    - Ressources humaines recommandées par spécialité
+    - Nombre de lits recommandés par service
+    """
+    try:
+        from datetime import date as date_type
+        import math
+
+        target = date_type.fromisoformat(date)
+        target_dow  = target.weekday()   # 0=Lun … 6=Dim
+        target_month = target.month
+
+        def get_season(m: int) -> str:
+            if m in (12, 1, 2): return "Hiver"
+            if m in (3, 4, 5):  return "Printemps"
+            if m in (6, 7, 8):  return "Ete"
+            return "Automne"
+        target_season = get_season(target_month)
+
+        urg = get_urg().copy()
+        etab_user = _etab_from_creds(creds)
+        if etab_user:
+            urg = urg[urg["Etablissement"] == etab_user]
+
+        # ── Prédiction patients ─────────────────────────────────────────
+        urg["date"] = urg["Date_Arrivee"].dt.normalize()
+        urg["dow"]  = urg["Date_Arrivee"].dt.dayofweek
+        urg["month"]= urg["Date_Arrivee"].dt.month
+
+        # Moyenne par (jour_semaine, mois) — le plus précis
+        daily = urg.groupby("date").size().reset_index(name="count")
+        daily["dow"]   = daily["date"].apply(lambda d: d.dayofweek)
+        daily["month"] = daily["date"].apply(lambda d: d.month)
+        mask = (daily["dow"] == target_dow) & (daily["month"] == target_month)
+        predicted_patients = int(round(daily.loc[mask, "count"].mean())) if mask.sum() > 0 else \
+                             int(round(daily.loc[daily["dow"] == target_dow, "count"].mean()))
+
+        # Moyenne globale pour les ratios
+        avg_daily = max(float(daily["count"].mean()), 1)
+        ratio     = predicted_patients / avg_daily   # facteur multiplicateur
+
+        # ── Ressources humaines par spécialité ─────────────────────────
+        rh_rows = []
+        if engine:
+            with engine.connect() as conn:
+                q_rh = "SELECT specialite, COUNT(*) as total, SUM(CASE WHEN statut IN ('En service','En garde') THEN 1 ELSE 0 END) as disponibles FROM personnel WHERE specialite IS NOT NULL AND specialite != ''"
+                if etab_user:
+                    q_rh += " AND etablissement = :etab"
+                q_rh += " GROUP BY specialite ORDER BY total DESC"
+                params_rh = {"etab": etab_user} if etab_user else {}
+                rows = conn.execute(text(q_rh), params_rh).fetchall()
+            for r in rows:
+                spec, total, disponibles = r[0], r[1], r[2]
+                recommande = max(1, math.ceil(disponibles * min(ratio, 2.0)))
+                ecart = recommande - disponibles
+                rh_rows.append({
+                    "specialite":  spec,
+                    "actuel":      int(disponibles),
+                    "total_equipe":int(total),
+                    "recommande":  recommande,
+                    "ecart":       ecart,           # >0 = besoin de plus
+                    "statut":      "critique" if ecart > 2 else "alerte" if ecart > 0 else "ok",
+                })
+
+        # ── Lits par service ────────────────────────────────────────────
+        lits_rows = []
+        taux_hospit = float((urg["Orientation"] == "Hospitalise").sum()) / max(len(urg), 1)
+        patients_hospitalises = max(1, int(round(predicted_patients * taux_hospit)))
+
+        if engine:
+            with engine.connect() as conn:
+                q_lits = "SELECT service, COUNT(*) as total, SUM(CASE WHEN statut='Disponible' THEN 1 ELSE 0 END) as disponibles FROM lits WHERE 1=1"
+                if etab_user:
+                    q_lits += " AND etablissement = :etab"
+                q_lits += " GROUP BY service ORDER BY total DESC"
+                params_lits = {"etab": etab_user} if etab_user else {}
+                rows = conn.execute(text(q_lits), params_lits).fetchall()
+            total_lits = sum(r[1] for r in rows) or 1
+            for r in rows:
+                service, total, disponibles = r[0], r[1], r[2]
+                part = total / total_lits
+                besoin = max(1, math.ceil(patients_hospitalises * part))
+                ecart  = besoin - disponibles
+                lits_rows.append({
+                    "service":    service,
+                    "total":      int(total),
+                    "disponibles":int(disponibles),
+                    "besoin":     besoin,
+                    "ecart":      ecart,
+                    "statut":     "critique" if ecart > 3 else "alerte" if ecart > 0 else "ok",
+                })
+
+        return {
+            "date":                 date,
+            "jour_semaine":         ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"][target_dow],
+            "saison":               target_season,
+            "patients_prevus":      predicted_patients,
+            "patients_hospitalises":patients_hospitalises,
+            "taux_hospit_pct":      round(taux_hospit * 100, 1),
+            "ressources_humaines":  rh_rows,
+            "lits_par_service":     lits_rows,
+        }
+    except ValueError as e:
+        raise HTTPException(400, f"Date invalide (format attendu: YYYY-MM-DD) — {e}")
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @app.get("/api/anomalies")
 def get_anomalies(creds: HTTPAuthorizationCredentials = Depends(security)):
     """Compare le flux horaire du dernier jour disponible vs la moyenne historique."""
