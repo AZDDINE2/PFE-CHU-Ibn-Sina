@@ -67,7 +67,7 @@ const SECTIONS = [
       { to: '/temporel',       label: 'Analyse Temporelle',  Icon: () => <IconChart size={16} color="currentColor"/> },
       { to: '/etablissements', label: 'Établissements',      Icon: () => <IconHospital size={16} color="currentColor"/> },
       { to: '/predictions',    label: 'Prédictions IA',      Icon: () => <IconBrain size={16} color="currentColor"/> },
-      { to: '/soins',          label: 'Soins & Coûts',       Icon: () => <IconPill size={16} color="currentColor"/> },
+      { to: '/soins',          label: 'Soins Médicaux',      Icon: () => <IconPill size={16} color="currentColor"/> },
     ],
   },
   {
@@ -99,7 +99,7 @@ const Sidebar: React.FC = () => {
   const allowedPaths = ROLE_PERMISSIONS[user?.role ?? 'admin'] ?? [];
   const roleLabel = ROLE_LABELS[user?.role ?? 'admin'] ?? 'Utilisateur';
 
-  const handleLogout = async () => { await logout(); navigate('/login'); };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const w = collapsed ? 68 : 240;
 
