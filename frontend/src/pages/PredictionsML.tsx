@@ -95,6 +95,12 @@ const IconStar = ({ size = 14, color = '#22c55e' }: { size?: number; color?: str
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
   </svg>
 );
+const IconCalendar = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
 const IconLoaderSpin = ({ size = 16, color = 'white' }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
     <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
@@ -108,7 +114,7 @@ const JOURS   = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanch
 const SAISONS = ['Hiver','Printemps','Été','Automne'];
 const ANTECEDENTS = ['Aucun','Cardiaque','Diabète','Respiratoire','Neurologique','Cancer','HTA'];
 
-type Tab = 'prevision' | 'saison' | 'patient' | 'lits';
+type Tab = 'prevision' | 'saison' | 'patient' | 'lits' | 'planif';
 
 interface MaladieSaison { motif: string; count: number; pct: number; p1_rate: number; hospit_rate: number; avg_duree: number; }
 interface SaisonData    { saison: string; total_patients: number; maladies: MaladieSaison[]; }
@@ -138,10 +144,11 @@ const PredictionsML: React.FC = () => {
   const muted   = textMuted;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: 'prevision', label: 'Prévision Affluence',    icon: <IconChart />,  desc: 'Combien de patients dans les 30 prochains jours ?' },
-    { id: 'saison',    label: 'Prévision Saisonnière',  icon: <IconAlert />,  desc: 'Quelles pathologies l\'urgence va-t-elle recevoir selon la saison ?' },
-    { id: 'patient',   label: 'Évaluation Patient',     icon: <IconUser />,   desc: 'Prédire le niveau de triage et la durée de séjour' },
-    { id: 'lits',      label: 'Orientation Lits',       icon: <IconBed />,    desc: 'Trouver un lit disponible selon le profil patient' },
+    { id: 'prevision', label: 'Prévision Affluence',    icon: <IconChart />,    desc: 'Combien de patients dans les 30 prochains jours ?' },
+    { id: 'saison',    label: 'Prévision Saisonnière',  icon: <IconAlert />,    desc: 'Quelles pathologies l\'urgence va-t-elle recevoir selon la saison ?' },
+    { id: 'planif',    label: 'Planification Date',     icon: <IconCalendar/>,  desc: 'Patients prévus, ressources humaines et lits nécessaires pour une date donnée' },
+    { id: 'patient',   label: 'Évaluation Patient',     icon: <IconUser />,     desc: 'Prédire le niveau de triage et la durée de séjour' },
+    { id: 'lits',      label: 'Orientation Lits',       icon: <IconBed />,      desc: 'Trouver un lit disponible selon le profil patient' },
   ];
 
   return (
@@ -186,6 +193,7 @@ const PredictionsML: React.FC = () => {
       {/* ── Tab Content ── */}
       {tab === 'prevision' && <TabPrevision dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'saison'    && <TabSaison    dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
+      {tab === 'planif'    && <TabPlanif    dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'patient'   && <TabPatient   dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'lits'      && <TabLits      dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
     </div>
@@ -536,6 +544,223 @@ const TabSaison: React.FC<{ dark: boolean; cardBg: string; border: string; text:
           ))}
         </div>
       </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// TAB PLANIF — PLANIFICATION PAR DATE
+// ══════════════════════════════════════════════════════════════
+
+interface PlanifResult {
+  date: string; jour_semaine: string; saison: string;
+  patients_prevus: number; patients_hospitalises: number; taux_hospit_pct: number;
+  ressources_humaines: { specialite: string; actuel: number; total_equipe: number; recommande: number; ecart: number; statut: string }[];
+  lits_par_service:    { service: string; total: number; disponibles: number; besoin: number; ecart: number; statut: string }[];
+}
+
+const STATUT_COLOR: Record<string, string> = { ok: '#22C55E', alerte: '#F59E0B', critique: '#EF4444' };
+const STATUT_LABEL: Record<string, string>  = { ok: 'OK', alerte: 'Alerte', critique: 'Critique' };
+
+const TabPlanif: React.FC<{ dark: boolean; cardBg: string; border: string; text: string; muted: string; innerBg: string }> = ({
+  dark, cardBg, border, text, muted, innerBg,
+}) => {
+  const today = new Date().toISOString().split('T')[0];
+  const [date,    setDate]    = useState(today);
+  const [result,  setResult]  = useState<PlanifResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
+  const search = async () => {
+    if (!date) return;
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const token = localStorage.getItem('token');
+      const r = await axios.get(`/api/predictions/planification?date=${date}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setResult(r.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? 'Erreur lors de la prédiction.');
+    } finally { setLoading(false); }
+  };
+
+  // lancer au chargement avec la date du jour
+  React.useEffect(() => { search(); }, []); // eslint-disable-line
+
+  const tickColor = dark ? '#94a3b8' : '#64748b';
+  const tooltipBg2 = dark ? '#0f172a' : '#fff';
+  const tooltipBorder2 = dark ? '#334155' : '#e2e8f0';
+
+  const saison_color: Record<string,string> = { Hiver:'#60A5FA', Printemps:'#34D399', Ete:'#F59E0B', Automne:'#F97316' };
+  const sc = saison_color[result?.saison ?? ''] ?? '#3b82f6';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── Sélecteur de date ── */}
+      <div style={{ background: cardBg, borderRadius: 12, padding: '20px 24px', border: `1px solid ${border}` }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: text, marginBottom: 4 }}>Sélectionner une date</div>
+        <div style={{ fontSize: 12, color: muted, marginBottom: 16 }}>
+          Le système prédit le nombre de patients, les ressources humaines et les lits nécessaires pour cette journée.
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Date</label>
+            <input
+              type="date" value={date}
+              onChange={e => setDate(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 9,
+                border: `1.5px solid ${border}`, background: dark ? '#0A0F1C' : '#F8FAFC',
+                color: text, fontSize: 14, outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => e.target.style.borderColor = '#2563EB'}
+              onBlur={e => e.target.style.borderColor = border}
+            />
+          </div>
+          <button onClick={search} disabled={loading} style={{
+            padding: '10px 28px', borderRadius: 9, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+            background: loading ? '#93C5FD' : 'linear-gradient(135deg,#1a3bdb,#3b82f6)',
+            color: '#fff', fontWeight: 700, fontSize: 14,
+            display: 'flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(37,99,235,0.3)',
+          }}>
+            {loading ? <IconLoaderSpin size={15} color="white"/> : <IconCalendar/>}
+            {loading ? 'Calcul...' : 'Prédire'}
+          </button>
+        </div>
+        {error && (
+          <div style={{ marginTop: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#EF4444' }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      {result && (<>
+
+        {/* ── KPIs principaux ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+          {[
+            { label: 'Date',                value: new Date(result.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }), color: text, small: true },
+            { label: 'Patients prévus',     value: result.patients_prevus,      color: '#2563EB' },
+            { label: 'Hospitalisations',    value: result.patients_hospitalises, color: '#8B5CF6' },
+            { label: 'Saison',              value: result.saison === 'Ete' ? 'Été' : result.saison, color: sc },
+          ].map(k => (
+            <div key={k.label} style={{ background: cardBg, borderRadius: 12, padding: '16px 20px', border: `1px solid ${border}`, borderLeft: `4px solid ${k.color}` }}>
+              <div style={{ fontSize: 10, color: muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>{k.label}</div>
+              <div style={{ fontSize: k.small ? 13 : 28, fontWeight: 800, color: k.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeof k.value === 'number' ? k.value.toLocaleString('fr-FR') : k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Ressources humaines par spécialité ── */}
+        <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 22px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: text }}>Ressources Humaines recommandées</div>
+              <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>Par spécialité — basé sur {result.patients_prevus} patients prévus</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['ok','alerte','critique'].map(s => (
+                <span key={s} style={{ fontSize: 11, fontWeight: 700, color: STATUT_COLOR[s], background: `${STATUT_COLOR[s]}15`, padding: '3px 10px', borderRadius: 20, border: `1px solid ${STATUT_COLOR[s]}30` }}>
+                  {result.ressources_humaines.filter(r => r.statut === s).length} {STATUT_LABEL[s]}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding: '12px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.ressources_humaines.length === 0 && (
+              <div style={{ color: muted, textAlign: 'center', padding: 20, fontSize: 13 }}>Aucune donnée de personnel disponible.</div>
+            )}
+            {result.ressources_humaines.map(r => {
+              const sc2 = STATUT_COLOR[r.statut];
+              const pct_actuel    = Math.min((r.actuel    / Math.max(r.recommande, 1)) * 100, 100);
+              return (
+                <div key={r.specialite} style={{ display: 'flex', alignItems: 'center', gap: 14, background: innerBg, borderRadius: 10, padding: '12px 16px', border: `1px solid ${border}` }}>
+                  {/* Statut dot */}
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: sc2, flexShrink: 0 }}/>
+                  {/* Spécialité */}
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: text }}>{r.specialite}</div>
+                    <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{r.total_equipe} en équipe · {r.actuel} disponibles</div>
+                  </div>
+                  {/* Barre actuel / recommandé */}
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: muted, marginBottom: 4 }}>
+                      <span>Actuel : <strong style={{ color: text }}>{r.actuel}</strong></span>
+                      <span>Besoin : <strong style={{ color: sc2 }}>{r.recommande}</strong></span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: dark ? '#1F2937' : '#E2E8F0' }}>
+                      <div style={{ width: `${pct_actuel}%`, height: '100%', background: sc2, borderRadius: 3, transition: 'width 0.6s' }}/>
+                    </div>
+                  </div>
+                  {/* Écart */}
+                  <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 60 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: r.ecart > 0 ? '#EF4444' : '#22C55E' }}>
+                      {r.ecart > 0 ? `+${r.ecart}` : r.ecart === 0 ? '✓' : `${r.ecart}`}
+                    </div>
+                    <div style={{ fontSize: 10, color: muted }}>{r.ecart > 0 ? 'manquant' : r.ecart < 0 ? 'excédent' : 'suffisant'}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Lits par service ── */}
+        <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 22px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: text }}>Lits recommandés par service</div>
+              <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>
+                Basé sur {result.patients_hospitalises} hospitalisations prévues ({result.taux_hospit_pct}% de taux hospit.)
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['ok','alerte','critique'].map(s => (
+                <span key={s} style={{ fontSize: 11, fontWeight: 700, color: STATUT_COLOR[s], background: `${STATUT_COLOR[s]}15`, padding: '3px 10px', borderRadius: 20, border: `1px solid ${STATUT_COLOR[s]}30` }}>
+                  {result.lits_par_service.filter(l => l.statut === s).length} {STATUT_LABEL[s]}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding: '12px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.lits_par_service.length === 0 && (
+              <div style={{ color: muted, textAlign: 'center', padding: 20, fontSize: 13 }}>Aucune donnée de lits disponible.</div>
+            )}
+            {result.lits_par_service.map(l => {
+              const sc3 = STATUT_COLOR[l.statut];
+              const pct_dispo = Math.min((l.disponibles / Math.max(l.besoin, 1)) * 100, 100);
+              return (
+                <div key={l.service} style={{ display: 'flex', alignItems: 'center', gap: 14, background: innerBg, borderRadius: 10, padding: '12px 16px', border: `1px solid ${border}` }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: sc3, flexShrink: 0 }}/>
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: text }}>{l.service}</div>
+                    <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{l.total} lits total · {l.disponibles} disponibles</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: muted, marginBottom: 4 }}>
+                      <span>Dispo : <strong style={{ color: text }}>{l.disponibles}</strong></span>
+                      <span>Besoin : <strong style={{ color: sc3 }}>{l.besoin}</strong></span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: dark ? '#1F2937' : '#E2E8F0' }}>
+                      <div style={{ width: `${pct_dispo}%`, height: '100%', background: sc3, borderRadius: 3, transition: 'width 0.6s' }}/>
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 60 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: l.ecart > 0 ? '#EF4444' : '#22C55E' }}>
+                      {l.ecart > 0 ? `+${l.ecart}` : l.ecart === 0 ? '✓' : `${l.ecart}`}
+                    </div>
+                    <div style={{ fontSize: 10, color: muted }}>{l.ecart > 0 ? 'manquant' : l.ecart < 0 ? 'excédent' : 'suffisant'}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </>)}
     </div>
   );
 };
