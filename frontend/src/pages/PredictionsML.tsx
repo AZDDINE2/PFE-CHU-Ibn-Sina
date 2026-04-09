@@ -108,7 +108,10 @@ const JOURS   = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanch
 const SAISONS = ['Hiver','Printemps','Été','Automne'];
 const ANTECEDENTS = ['Aucun','Cardiaque','Diabète','Respiratoire','Neurologique','Cancer','HTA'];
 
-type Tab = 'prevision' | 'anomalies' | 'patient' | 'lits';
+type Tab = 'prevision' | 'saison' | 'patient' | 'lits';
+
+interface MaladieSaison { motif: string; count: number; pct: number; p1_rate: number; hospit_rate: number; avg_duree: number; }
+interface SaisonData    { saison: string; total_patients: number; maladies: MaladieSaison[]; }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -135,10 +138,10 @@ const PredictionsML: React.FC = () => {
   const muted   = textMuted;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: 'prevision',  label: 'Prévision Affluence',  icon: <IconChart />,  desc: 'Combien de patients dans les 30 prochains jours ?' },
-    { id: 'anomalies',  label: 'Anomalies du Jour',    icon: <IconAlert />,  desc: 'Quelque chose d\'inhabituel se passe-t-il aujourd\'hui ?' },
-    { id: 'patient',    label: 'Évaluation Patient',   icon: <IconUser />,   desc: 'Prédire le niveau de triage et la durée de séjour' },
-    { id: 'lits',       label: 'Orientation Lits',     icon: <IconBed />,    desc: 'Trouver un lit disponible selon le profil patient' },
+    { id: 'prevision', label: 'Prévision Affluence',    icon: <IconChart />,  desc: 'Combien de patients dans les 30 prochains jours ?' },
+    { id: 'saison',    label: 'Prévision Saisonnière',  icon: <IconAlert />,  desc: 'Quelles pathologies l\'urgence va-t-elle recevoir selon la saison ?' },
+    { id: 'patient',   label: 'Évaluation Patient',     icon: <IconUser />,   desc: 'Prédire le niveau de triage et la durée de séjour' },
+    { id: 'lits',      label: 'Orientation Lits',       icon: <IconBed />,    desc: 'Trouver un lit disponible selon le profil patient' },
   ];
 
   return (
@@ -182,7 +185,7 @@ const PredictionsML: React.FC = () => {
 
       {/* ── Tab Content ── */}
       {tab === 'prevision' && <TabPrevision dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
-      {tab === 'anomalies' && <TabAnomalies dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} />}
+      {tab === 'saison'    && <TabSaison    dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'patient'   && <TabPatient   dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'lits'      && <TabLits      dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
     </div>
@@ -302,138 +305,237 @@ const TabPrevision: React.FC<{ dark: boolean; cardBg: string; border: string; te
 };
 
 // ══════════════════════════════════════════════════════════════
-// TAB 2 — ANOMALIES DU JOUR
+// TAB 2 — PRÉVISION SAISONNIÈRE
 // ══════════════════════════════════════════════════════════════
 
-const TabAnomalies: React.FC<{ dark: boolean; cardBg: string; border: string; text: string; muted: string }> = ({ dark, cardBg, border, text, muted }) => {
-  const [data, setData]     = useState<Anomalie[]>([]);
-  const [loading, setLoading] = useState(true);
+/* Détecter la saison courante selon le mois */
+function currentSeason(): string {
+  const m = new Date().getMonth() + 1; // 1-12
+  if (m === 12 || m <= 2) return 'Hiver';
+  if (m <= 5)             return 'Printemps';
+  if (m <= 8)             return 'Ete';
+  return 'Automne';
+}
 
-  const load = useCallback(() => {
-    const token = localStorage.getItem('token');
-    axios.get('/api/anomalies', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => { setData(r.data); setLoading(false); })
+const SAISON_META: Record<string, { label: string; color: string; bg: string; darkBg: string; months: string; conseil: string }> = {
+  'Hiver':     { label: 'Hiver',     color: '#60A5FA', bg: '#EFF6FF', darkBg: 'rgba(96,165,250,0.08)',  months: 'Déc · Jan · Fév', conseil: 'Renforcer la capacité en réanimation et pneumologie. Prévoir stocks antiviraux.' },
+  'Printemps': { label: 'Printemps', color: '#34D399', bg: '#ECFDF5', darkBg: 'rgba(52,211,153,0.08)',  months: 'Mar · Avr · Mai', conseil: 'Anticiper les pics allergiques et traumatismes sportifs. Équipes dermatologie en alerte.' },
+  'Ete':       { label: 'Été',       color: '#F59E0B', bg: '#FFFBEB', darkBg: 'rgba(245,158,11,0.08)',  months: 'Jun · Jul · Aoû', conseil: 'Protocoles coup de chaleur actifs. Surveiller déshydratation et intoxications alimentaires.' },
+  'Automne':   { label: 'Automne',   color: '#F97316', bg: '#FFF7ED', darkBg: 'rgba(249,115,22,0.08)',  months: 'Sep · Oct · Nov', conseil: 'Préparer la campagne grippe. Suivi pathologies cardiovasculaires et respiratoires.' },
+};
+
+const IconSaisonSvg: Record<string, React.ReactNode> = {
+  'Hiver': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M7 7l5 5 5-5"/><path d="M7 17l5-5 5 5"/>
+      <path d="M17 7l-5 5-5-5" transform="rotate(90 12 12)"/><path d="M17 17l-5-5-5 5" transform="rotate(90 12 12)"/>
+    </svg>
+  ),
+  'Printemps': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2a4 4 0 0 1 4 4c0 2-4 3-4 3s-4-1-4-3a4 4 0 0 1 4-4z"/>
+      <path d="M12 22a4 4 0 0 1-4-4c0-2 4-3 4-3s4 1 4 3a4 4 0 0 1-4 4z"/>
+      <path d="M2 12a4 4 0 0 1 4-4c2 0 3 4 3 4s-1 4-3 4a4 4 0 0 1-4-4z"/>
+      <path d="M22 12a4 4 0 0 1-4 4c-2 0-3-4-3-4s1-4 3-4a4 4 0 0 1 4 4z"/>
+    </svg>
+  ),
+  'Ete': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  ),
+  'Automne': (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+    </svg>
+  ),
+};
+
+const TabSaison: React.FC<{ dark: boolean; cardBg: string; border: string; text: string; muted: string; innerBg: string }> = ({
+  dark, cardBg, border, text, muted, innerBg,
+}) => {
+  const [allData,  setAllData]  = useState<SaisonData[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [selected, setSelected] = useState<string>(currentSeason());
+
+  useEffect(() => {
+    axios.get('/api/urgences/maladies_saisonnieres')
+      .then(r => { setAllData(r.data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  if (loading) return <div style={{ color: muted, textAlign: 'center', padding: 60 }}>Chargement des données saisonnières...</div>;
+  if (!allData.length) return <div style={{ color: muted, textAlign: 'center', padding: 60 }}>Aucune donnée disponible</div>;
 
-  const anomalies   = data.filter(d => d.anomalie);
-  const hausse      = anomalies.filter(d => d.ecart_pct > 0);
-  const baisse      = anomalies.filter(d => d.ecart_pct < 0);
-  const tickColor   = dark ? '#94a3b8' : '#64748b';
-  const gridColor   = dark ? '#334155' : '#f1f5f9';
-  const tooltipBg   = dark ? '#0f172a' : '#fff';
-  const tooltipBorder = dark ? '#334155' : '#e2e8f0';
+  const saisonData   = allData.find(s => s.saison === selected) ?? allData[0];
+  const meta         = SAISON_META[saisonData.saison] ?? SAISON_META['Hiver'];
+  const cfgBg        = dark ? meta.darkBg : meta.bg;
+  const totalAll     = allData.reduce((s, d) => s + d.total_patients, 0);
+  const isCurrentSeason = saisonData.saison === currentSeason();
+  const tickColor    = dark ? '#94a3b8' : '#64748b';
+  const tooltipBg2   = dark ? '#0f172a' : '#fff';
+  const tooltipBorder2 = dark ? '#334155' : '#e2e8f0';
 
-  if (loading) return <div style={{ color: muted, textAlign: 'center', padding: 60 }}>Analyse en cours...</div>;
-
-  const chartData = data.map(d => ({
-    heure:        `${String(d.heure).padStart(2,'0')}h`,
-    'Moy. historique': d.historique_moy,
-    "Aujourd'hui": d.aujourd_hui,
-    anomalie:     d.anomalie,
-    ecart:        d.ecart_pct,
+  const chartData = allData.map(s => ({
+    name: SAISON_META[s.saison]?.label ?? s.saison,
+    patients: s.total_patients,
+    color: SAISON_META[s.saison]?.color ?? '#94a3b8',
   }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Alert banner */}
-      {anomalies.length > 0 ? (
-        <div style={{
-          background: '#fef3c720', border: '1.5px solid #f59e0b',
-          borderRadius: 12, padding: '14px 20px',
-          display: 'flex', alignItems: 'center', gap: 14,
-        }}>
-          <IconWarningLg size={32} color="#f59e0b" />
+      {/* Current season banner */}
+      <div style={{
+        background: cfgBg,
+        border: `1.5px solid ${meta.color}40`,
+        borderRadius: 12, padding: '14px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: `${meta.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: meta.color }}>
+            {IconSaisonSvg[saisonData.saison]}
+          </div>
           <div>
-            <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: 14 }}>
-              {anomalies.length} heure{anomalies.length > 1 ? 's' : ''} avec activité inhabituelle détectée{anomalies.length > 1 ? 's' : ''}
+            <div style={{ fontWeight: 700, color: meta.color, fontSize: 15 }}>
+              {meta.label} {isCurrentSeason && <span style={{ fontSize: 11, background: `${meta.color}20`, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>Saison actuelle</span>}
             </div>
-            <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>
-              {hausse.length > 0 && `${hausse.length} pic(s) de hausse · `}
-              {baisse.length > 0 && `${baisse.length} baisse(s) anormale(s)`}
-            </div>
+            <div style={{ fontSize: 12, color: muted }}>{meta.months} · {saisonData.total_patients.toLocaleString('fr-FR')} patients historiques ({((saisonData.total_patients / totalAll) * 100).toFixed(0)}% du total)</div>
           </div>
         </div>
-      ) : (
-        <div style={{ background: '#d1fae520', border: '1.5px solid #22c55e', borderRadius: 12, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <IconCheckLg size={32} color="#22c55e" />
-          <div style={{ fontWeight: 700, color: '#22c55e', fontSize: 14 }}>Flux normal — Aucune anomalie détectée aujourd'hui</div>
+        <div style={{ fontSize: 12, color: muted, maxWidth: 340, fontStyle: 'italic', background: `${meta.color}10`, padding: '8px 14px', borderRadius: 8, borderLeft: `3px solid ${meta.color}` }}>
+          {meta.conseil}
         </div>
-      )}
+      </div>
 
-      {/* KPIs */}
+      {/* Saison selector */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {allData.map(s => {
+          const m = SAISON_META[s.saison];
+          const isActive = s.saison === selected;
+          return (
+            <button key={s.saison} onClick={() => setSelected(s.saison)} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 16px', borderRadius: 10, cursor: 'pointer',
+              border: `2px solid ${isActive ? m.color : border}`,
+              background: isActive ? (dark ? m.darkBg : m.bg) : cardBg,
+              color: isActive ? m.color : muted,
+              fontWeight: isActive ? 700 : 500, fontSize: 13,
+              transition: 'all 0.15s',
+            }}>
+              <span style={{ color: isActive ? m.color : '#94a3b8' }}>{IconSaisonSvg[s.saison]}</span>
+              {m.label}
+              {s.saison === currentSeason() && (
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.color, display: 'inline-block' }}/>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* KPIs de la saison */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
         {[
-          { label: 'Anomalies détectées', value: anomalies.length, color: anomalies.length > 0 ? '#f59e0b' : '#22c55e' },
-          { label: 'Hausses inhabituelles', value: hausse.length, color: '#ef4444' },
-          { label: 'Baisses anormales',     value: baisse.length, color: '#3b82f6' },
+          { label: 'Patients historiques', value: saisonData.total_patients.toLocaleString('fr-FR'), color: meta.color },
+          { label: 'Top motif',            value: saisonData.maladies[0]?.motif ?? '—',             color: text, small: true },
+          { label: 'Taux P1 moyen',        value: saisonData.maladies.length
+              ? `${(saisonData.maladies.reduce((s, m) => s + m.p1_rate, 0) / saisonData.maladies.length).toFixed(1)}%`
+              : '—',
+            color: '#ef4444' },
         ].map(k => (
-          <div key={k.label} style={{ background: cardBg, borderRadius: 12, padding: '18px 20px', border: `1px solid ${border}`, textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>{k.label}</div>
-            <div style={{ fontSize: 34, fontWeight: 900, color: k.color }}>{k.value}</div>
+          <div key={k.label} style={{ background: cardBg, borderRadius: 12, padding: '16px 20px', border: `1px solid ${border}` }}>
+            <div style={{ fontSize: 10, color: muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>{k.label}</div>
+            <div style={{ fontSize: k.small ? 15 : 26, fontWeight: 800, color: k.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Chart */}
-      <div style={{ background: cardBg, borderRadius: 12, padding: 24, border: `1px solid ${border}` }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: text, marginBottom: 4 }}>Flux horaire : Aujourd'hui vs Moyenne historique</div>
-        <div style={{ fontSize: 12, color: muted, marginBottom: 20 }}>
-          Bleu = moyenne habituelle sur l'ensemble des données · Rouge = valeur du dernier jour disponible
-        </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-            <XAxis dataKey="heure" tick={{ fill: tickColor, fontSize: 10 }} />
-            <YAxis tick={{ fill: tickColor, fontSize: 11 }} />
+      {/* Distribution saisonnière */}
+      <div style={{ background: cardBg, borderRadius: 12, padding: 22, border: `1px solid ${border}` }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: text, marginBottom: 4 }}>Volume de patients par saison</div>
+        <div style={{ fontSize: 12, color: muted, marginBottom: 16 }}>Répartition historique sur l'ensemble des données</div>
+        <ResponsiveContainer width="100%" height={140}>
+          <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+            <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: tickColor, fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8 }}
+              contentStyle={{ background: tooltipBg2, border: `1px solid ${tooltipBorder2}`, borderRadius: 8 }}
               labelStyle={{ color: text, fontWeight: 700 }}
               itemStyle={{ color: text }}
-              formatter={(val: any, name: string) => [typeof val === 'number' ? val.toFixed(1) : val, name]}
+              formatter={(v: any) => [v.toLocaleString('fr-FR'), 'Patients']}
             />
-            <Bar dataKey="Moy. historique" fill="#3b82f6" radius={[4,4,0,0]} opacity={0.7} />
-            <Bar dataKey="Aujourd'hui" radius={[4,4,0,0]}>
+            <Bar dataKey="patients" radius={[6,6,0,0]}>
               {chartData.map((d, i) => (
-                <Cell key={i} fill={d.anomalie ? '#ef4444' : '#22c55e'} />
+                <Cell key={i} fill={d.name === (SAISON_META[selected]?.label ?? '') ? meta.color : (dark ? '#1F2937' : '#E2E8F0')} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 10 }}>
-          {[['#3b82f6','Moy. historique'],['#22c55e',"Aujourd'hui (normal)"],['#ef4444',"Aujourd'hui (anomalie)"]].map(([c,l]) => (
-            <span key={l} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color: muted }}>
-              <span style={{ width:12, height:12, borderRadius:3, background:c, display:'inline-block' }}/>{l}
-            </span>
+      </div>
+
+      {/* Top 5 motifs */}
+      <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: text }}>
+            Top 5 motifs de consultation prévus — {meta.label}
+          </div>
+          <div style={{ fontSize: 11, color: muted }}>Basé sur {saisonData.total_patients.toLocaleString('fr-FR')} consultations historiques</div>
+        </div>
+        <div style={{ padding: '12px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {saisonData.maladies.map((m, i) => (
+            <div key={m.motif} style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              background: innerBg, borderRadius: 10, padding: '12px 16px',
+              border: `1px solid ${border}`,
+            }}>
+              {/* Rang */}
+              <div style={{
+                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: i === 0 ? meta.color : `${meta.color}22`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: i === 0 ? '#fff' : meta.color,
+                fontWeight: 800, fontSize: 14,
+              }}>{i + 1}</div>
+
+              {/* Motif + barre */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.motif}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: meta.color, flexShrink: 0, marginLeft: 8 }}>
+                    {m.count.toLocaleString('fr-FR')} cas ({m.pct}%)
+                  </span>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: dark ? '#1F2937' : '#E2E8F0' }}>
+                  <div style={{ width: `${m.pct}%`, height: '100%', background: meta.color, borderRadius: 3, transition: 'width 0.6s' }}/>
+                </div>
+              </div>
+
+              {/* Badges stats */}
+              <div style={{ display: 'flex', gap: 14, flexShrink: 0, borderLeft: `1px solid ${border}`, paddingLeft: 14 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#EF4444' }}>{m.p1_rate}%</div>
+                  <div style={{ fontSize: 9, color: muted, textTransform: 'uppercase', fontWeight: 600 }}>P1 Crit.</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#8B5CF6' }}>{m.hospit_rate}%</div>
+                  <div style={{ fontSize: 9, color: muted, textTransform: 'uppercase', fontWeight: 600 }}>Hospit.</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: text }}>{m.avg_duree}<span style={{ fontSize: 10, color: muted }}>m</span></div>
+                  <div style={{ fontSize: 9, color: muted, textTransform: 'uppercase', fontWeight: 600 }}>Durée</div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
-
-      {/* Detail list */}
-      {anomalies.length > 0 && (
-        <div style={{ background: cardBg, borderRadius: 12, padding: 22, border: `1px solid ${border}` }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: text, marginBottom: 14 }}>Détail des anomalies</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {anomalies.map(d => (
-              <div key={d.heure} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 14px', borderRadius: 8,
-                background: d.ecart_pct > 0 ? '#fef3c720' : '#dbeafe20',
-                border: `1px solid ${d.ecart_pct > 0 ? '#f59e0b40' : '#3b82f640'}`,
-              }}>
-                <span style={{ fontWeight: 700, color: text }}>{String(d.heure).padStart(2,'0')}h00 – {String(d.heure+1).padStart(2,'0')}h00</span>
-                <span style={{ color: muted, fontSize: 12 }}>Attendu : {d.historique_moy.toFixed(1)} · Réel : {d.aujourd_hui}</span>
-                <span style={{ fontWeight: 800, color: d.ecart_pct > 0 ? '#ef4444' : '#3b82f6', fontSize: 14 }}>
-                  {d.ecart_pct > 0 ? '+' : ''}{d.ecart_pct.toFixed(0)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
