@@ -45,7 +45,7 @@ const AdmissionPatient: React.FC = () => {
   const { showToast } = useToast();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ id_urgence: string; id_patient: string } | null>(null);
+  const [result, setResult] = useState<{ IPP: string } | null>(null);
 
   const {
     cardBg, cardBg2, innerBg, border: themeBorder, textPrimary, textSecondary, textMuted,
@@ -128,7 +128,7 @@ const AdmissionPatient: React.FC = () => {
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       setResult(res.data);
-      showToast({ title: `Patient admis — ${res.data.id_urgence}`, type: 'success' });
+      showToast({ title: `Patient admis — ${res.data.IPP}`, type: 'success' });
       setForm({ ...initialForm, date_arrivee: new Date().toISOString().slice(0, 16) });
     } catch {
       showToast({ title: "Erreur lors de l'admission", type: 'error' });
@@ -164,8 +164,7 @@ const AdmissionPatient: React.FC = () => {
           <div>
             <div style={{ fontWeight: 700, color: dark ? '#86efac' : '#15803d', fontSize: 14 }}>Patient admis avec succès</div>
             <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
-              ID Urgence : <strong style={{ color: text }}>{result.id_urgence}</strong> &nbsp;|&nbsp;
-              ID Patient : <strong style={{ color: text }}>{result.id_patient}</strong>
+              IPP : <strong style={{ color: text }}>{result.IPP}</strong> &nbsp;|&nbsp;
             </div>
           </div>
         </div>

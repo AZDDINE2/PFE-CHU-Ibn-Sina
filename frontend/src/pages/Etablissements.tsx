@@ -37,6 +37,7 @@ const perfScore = (e: Etab, all: Etab[]): number => {
 const EtabCard: React.FC<{ e: Etab; all: Etab[]; dark: boolean; onClick: () => void }> = ({ e, all, dark, onClick }) => {
   const cardBg    = dark ? '#1e293b' : '#fff';
   const cardBorder= dark ? '#334155' : '#f1f5f9';
+  const cardShadow= dark ? '0 2px 10px rgba(0,0,0,0.3)' : '0 2px 10px rgba(22,36,84,0.07)';
   const titleColor= dark ? '#e2e8f0' : '#0f172a';
   const labelColor= dark ? '#94a3b8' : '#64748B';
   const innerBg   = dark ? '#0f172a' : '#F8FAFC';
@@ -155,7 +156,7 @@ const EtabModal: React.FC<{ e: Etab; all: Etab[]; dark: boolean; onClose: () => 
               { l:'Durée moy.',     v:`${e.Duree_Moy_Min} min`, alert: e.Duree_Moy_Min>240 },
               { l:'Taux fugue',     v:`${e.Taux_Fugue_Pct}%`, alert: e.Taux_Fugue_Pct>5 },
               { l:'Taux P1',        v:`${e.Taux_P1_Pct}%` },
-              { l:'Ratio M/L',      v:e.Ratio_Medecins_Lits?.toFixed(2) },
+              { l:'Catégorie',      v:e.Categorie_Taille },
             ].map(item => (
               <div key={item.l} style={{ background:inner, borderRadius:10, padding:'10px 12px' }}>
                 <div style={{ fontSize:9, color:muted, textTransform:'uppercase', fontWeight:700, marginBottom:4 }}>{item.l}</div>
@@ -163,6 +164,89 @@ const EtabModal: React.FC<{ e: Etab; all: Etab[]; dark: boolean; onClose: () => 
               </div>
             ))}
           </div>
+
+          {/* Ressources humaines row */}
+          {(e.nb_infirmiers || e.nb_ambulances) && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+              {e.nb_infirmiers && (
+                <div style={{ background:inner, borderRadius:10, padding:'10px 12px' }}>
+                  <div style={{ fontSize:9, color:muted, textTransform:'uppercase', fontWeight:700, marginBottom:4 }}>Infirmiers</div>
+                  <div style={{ fontWeight:800, fontSize:14, color:text }}>{e.nb_infirmiers}</div>
+                </div>
+              )}
+              {e.nb_ambulances && (
+                <div style={{ background:inner, borderRadius:10, padding:'10px 12px' }}>
+                  <div style={{ fontSize:9, color:muted, textTransform:'uppercase', fontWeight:700, marginBottom:4 }}>Ambulances</div>
+                  <div style={{ fontWeight:800, fontSize:14, color:text }}>{e.nb_ambulances}</div>
+                </div>
+              )}
+              {e.annee_fondation && (
+                <div style={{ background:inner, borderRadius:10, padding:'10px 12px' }}>
+                  <div style={{ fontSize:9, color:muted, textTransform:'uppercase', fontWeight:700, marginBottom:4 }}>Fondé en</div>
+                  <div style={{ fontWeight:800, fontSize:14, color:text }}>{e.annee_fondation}</div>
+                </div>
+              )}
+              {e.superficie_m2 && (
+                <div style={{ background:inner, borderRadius:10, padding:'10px 12px', gridColumn:'span 3' }}>
+                  <div style={{ fontSize:9, color:muted, textTransform:'uppercase', fontWeight:700, marginBottom:4 }}>Superficie</div>
+                  <div style={{ fontWeight:800, fontSize:14, color:text }}>{e.superficie_m2.toLocaleString('fr-FR')} m²</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contact & infos */}
+          {(e.adresse || e.telephone || e.email || e.directeur) && (
+            <div style={{ background:inner, borderRadius:12, padding:'14px 16px', marginBottom:20 }}>
+              <div style={{ fontWeight:700, fontSize:12, color:text, marginBottom:10 }}>Contact & Informations</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                {e.directeur && (
+                  <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:10, color:muted, minWidth:80, fontWeight:600 }}>Direction</span>
+                    <span style={{ fontSize:12, color:text, fontWeight:600 }}>{e.directeur}</span>
+                  </div>
+                )}
+                {e.adresse && (
+                  <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:10, color:muted, minWidth:80, fontWeight:600 }}>Adresse</span>
+                    <span style={{ fontSize:12, color:text }}>{e.adresse}</span>
+                  </div>
+                )}
+                {e.telephone && (
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:10, color:muted, minWidth:80, fontWeight:600 }}>Téléphone</span>
+                    <span style={{ fontSize:12, color:'#3B82F6', fontWeight:600 }}>{e.telephone}</span>
+                  </div>
+                )}
+                {e.email && (
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:10, color:muted, minWidth:80, fontWeight:600 }}>Email</span>
+                    <span style={{ fontSize:12, color:'#3B82F6' }}>{e.email}</span>
+                  </div>
+                )}
+                {e.accreditation && (
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:10, color:muted, minWidth:80, fontWeight:600 }}>Accréditation</span>
+                    <span style={{ fontSize:11, background:'#F0FDF4', color:'#166534', borderRadius:20, padding:'2px 10px', fontWeight:700, border:'1px solid #BBF7D0' }}>{e.accreditation}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Services */}
+          {e.services && (
+            <div style={{ background:inner, borderRadius:12, padding:'14px 16px', marginBottom:20 }}>
+              <div style={{ fontWeight:700, fontSize:12, color:text, marginBottom:10 }}>Services & Spécialités</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {e.services.split(',').map(s => s.trim()).filter(Boolean).map(s => (
+                  <span key={s} style={{ fontSize:11, background: dark?'#1e3a5f':'#EFF6FF', color: dark?'#93C5FD':'#1D4ED8', borderRadius:20, padding:'3px 10px', fontWeight:600, border: dark?'1px solid #1e3a5f':'1px solid #BFDBFE' }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Radar */}
           <div style={{ marginBottom:16 }}>
@@ -188,7 +272,7 @@ const EtabModal: React.FC<{ e: Etab; all: Etab[]; dark: boolean; onClose: () => 
 
 const Etablissements: React.FC = () => {
   const { dark } = useTheme();
-  const { exportReport, exporting, pdfBase64, pdfFilename } = usePDF('Etablissements_CHU.pdf');
+  const { exportReport, exporting, pdfBase64, pdfFilename, pdfError } = usePDF('Etablissements_CHU.pdf');
   const [emailOpen, setEmailOpen] = useState(false);
   const [etabs,   setEtabs]   = useState<Etab[]>([]);
   const [loading, setLoading] = useState(true);
@@ -304,10 +388,10 @@ const Etablissements: React.FC = () => {
 
       <PageHeader
         icon={<IconHospital size={22} color="white"/>}
-        title="Etablissements"
-        subtitle="Comparaison des 8 établissements du CHU Ibn Sina"
+        title="Établissements"
+        subtitle={`Comparaison des ${etabs.length} établissements du CHU Ibn Sina`}
         badge={`${etabs.length} établissements`}
-        actions={<div style={{display:'flex',gap:8}}><ExportButton label={exporting?'Export...':'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF}/><button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#1a3bdb,#3b82f6)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button></div>}
+        actions={<div style={{display:'flex',gap:8}}><ExportButton label={exporting?'Export...':'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF} onDark/><button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'1px solid rgba(255,255,255,0.28)',cursor:'pointer',background:'rgba(255,255,255,0.15)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button></div>}
       />
 
       <FilterBar
@@ -345,7 +429,12 @@ const Etablissements: React.FC = () => {
       {/* Charts */}
       <div style={{ background:cardBg, borderRadius:12, padding:'20px 24px', marginBottom:16, boxShadow:cardShadow, border:`1px solid ${cardBorder}` }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-          <div style={{ fontWeight:700, color:titleColor, fontSize:14 }}>Comparaison des indicateurs</div>
+          <div>
+            <div style={{ fontWeight:700, color:titleColor, fontSize:14 }}>Comparaison des indicateurs</div>
+            <div style={{ fontSize:11, color:labelColor, marginTop:2 }}>
+              {chartTab==='lits' ? 'Capacité totale en lits par établissement' : chartTab==='personnel' ? 'Effectif médecins et urgentistes' : 'Score de performance sur 100 (hospitalisation, durée, fugue)'}
+            </div>
+          </div>
           <div style={{ display:'flex', gap:6 }}>
             {([
               ['lits',      'Capacité lits'],
@@ -437,7 +526,12 @@ const Etablissements: React.FC = () => {
       )}
     </div>
 
-    <EmailModal open={emailOpen} onClose={()=>setEmailOpen(false)} pdfBase64={pdfBase64} filename={pdfFilename} pageTitle="Etablissements — CHU Ibn Sina"/>
+    {pdfError && (
+      <div style={{ margin: '0 0 16px', padding: '10px 16px', borderRadius: 9, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13 }}>
+        Erreur PDF : {pdfError}
+      </div>
+    )}
+    <EmailModal open={emailOpen} onClose={()=>setEmailOpen(false)} pdfBase64={pdfBase64} filename={pdfFilename} pageTitle="Établissements — CHU Ibn Sina"/>
     </>
   );
 };

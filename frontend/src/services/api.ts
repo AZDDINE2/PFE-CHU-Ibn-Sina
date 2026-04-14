@@ -19,6 +19,10 @@ export interface Etab {
   Duree_Moy_Min: number; Taux_Hospit_Pct: number; Taux_Fugue_Pct: number;
   Taux_P1_Pct: number; Alerte_Charge: string; Ratio_Medecins_Lits: number;
   Categorie_Taille: string;
+  // Enriched fields
+  adresse?: string; telephone?: string; email?: string; directeur?: string;
+  annee_fondation?: number; nb_infirmiers?: number; nb_ambulances?: number;
+  services?: string; accreditation?: string; superficie_m2?: number;
 }
 export interface SoinType    { type_soin: string; count: number; }
 export interface CoutType    { type_soin: string; cout_moyen: number; }

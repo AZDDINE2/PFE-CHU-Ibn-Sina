@@ -109,7 +109,7 @@ const KPIsGlobaux: React.FC = () => {
     return total ? ((p1?.count || 0) / total * 100).toFixed(1) : '0';
   }, [triage]);
 
-  const { exportReport, exporting, pdfBase64, pdfFilename } = usePDF('KPIs_CHU_Ibn_Sina.pdf');
+  const { exportReport, exporting, pdfBase64, pdfFilename, pdfError } = usePDF('KPIs_CHU_Ibn_Sina.pdf');
   const [emailOpen, setEmailOpen] = useState(false);
 
   const tooltipStyle = {
@@ -204,8 +204,8 @@ const KPIsGlobaux: React.FC = () => {
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <LiveBadge live={live} lastUpdate={lastUpdate} onToggle={toggleLive} />
-            <ExportButton label={exporting ? 'Export...' : 'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF}/>
-            <button onClick={() => setEmailOpen(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#1a3bdb,#3b82f6)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ExportButton label={exporting ? 'Export...' : 'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF} onDark/>
+            <button onClick={() => setEmailOpen(true)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.28)', cursor: 'pointer', background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <IconMail size={13} color="white"/> Email
             </button>
           </div>
@@ -225,8 +225,11 @@ const KPIsGlobaux: React.FC = () => {
       {/* OMS Gauge */}
       <div style={{ background: cardBg, borderRadius: 12, padding: '18px 24px', marginBottom: 24, border: `1px solid ${cardBorder}` }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: titleColor }}>
-            <IconClock size={16} color="#F59E0B"/> Durée de séjour vs. Objectif OMS (240 min)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: titleColor }}>
+              <IconClock size={16} color="#F59E0B"/> Conformité OMS — Durée de séjour
+            </div>
+            <div style={{ fontSize: 11, color: labelColor }}>Objectif OMS : ≤ 240 min par passage aux urgences</div>
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: jaugeColor, background: `${jaugeColor}18`, padding: '3px 10px', borderRadius: 20 }}>
             {kpis.duree_moy <= 240 ? '✓ Conforme' : '✗ Dépassé'}
@@ -360,7 +363,7 @@ const KPIsGlobaux: React.FC = () => {
       {/* Flux horaire */}
       <div style={{ background: cardBg, borderRadius: 12, padding: '20px 24px', border: `1px solid ${cardBorder}`, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>Flux par heure d'arrivée</div>
+          <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>Distribution par heure d'arrivée</div>
           <span style={{ fontSize: 11, background: '#EF444418', color: '#EF4444', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
             Pic : {peakHour?.heure}h00
           </span>
@@ -399,6 +402,11 @@ const KPIsGlobaux: React.FC = () => {
       </div>
     </div>
 
+    {pdfError && (
+      <div style={{ margin: '0 0 16px', padding: '10px 16px', borderRadius: 9, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13 }}>
+        Erreur PDF : {pdfError}
+      </div>
+    )}
     <EmailModal
       open={emailOpen}
       onClose={() => setEmailOpen(false)}

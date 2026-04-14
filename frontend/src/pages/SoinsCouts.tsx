@@ -197,7 +197,10 @@ const SoinsCouts: React.FC = () => {
         {/* Types de soins */}
         <div style={{ background: cardBg, borderRadius: 12, padding: '20px 24px', boxShadow: cardShadow, border: `1px solid ${cardBorder}` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>Types de soins — Volume</div>
+            <div>
+              <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>Actes médicaux par type</div>
+              <div style={{ fontSize: 11, color: labelColor, marginTop: 2 }}>Nombre total d'actes réalisés par catégorie de soins</div>
+            </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {[5, 10, 15].map(n => (
                 <button key={n} onClick={() => setTopN(n)} style={{
@@ -223,8 +226,8 @@ const SoinsCouts: React.FC = () => {
 
         {/* Résultats des soins */}
         <div style={{ background: cardBg, borderRadius: 12, padding: '20px 24px', boxShadow: cardShadow, border: `1px solid ${cardBorder}` }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, color: titleColor, fontSize: 14 }}>Résultats des soins</div>
-          <div style={{ fontSize: 11, color: labelColor, marginBottom: 16 }}>Distribution des issues cliniques</div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: titleColor, fontSize: 14 }}>Issues cliniques</div>
+          <div style={{ fontSize: 11, color: labelColor, marginBottom: 16 }}>Répartition des résultats de soins</div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={resultatsWithPct} dataKey="count" nameKey="resultat" cx="50%" cy="50%" innerRadius={48} outerRadius={78} paddingAngle={3}>

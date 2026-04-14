@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 interface Props {
   label?: string;
@@ -6,108 +7,215 @@ interface Props {
   onExportPDF?: () => void;
   csvUrl?: string;
   excelUrl?: string;
+  /** true = bouton placé sur un fond sombre (PageHeader gradient) */
+  onDark?: boolean;
 }
 
-const ExportButton: React.FC<Props> = ({ label = 'Exporter', onExportCSV, onExportPDF, csvUrl, excelUrl }) => {
-  const [open, setOpen] = useState(false);
+/* Téléchargement fiable cross-browser (Firefox inclus) */
+const triggerDownload = (url: string, filename?: string) => {
+  const a = document.createElement('a');
+  a.href = url;
+  if (filename) a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 200);
+};
 
-  const handleCSV = () => {
+const Spinner: React.FC<{ color?: string }> = ({ color = '#475569' }) => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"
+    strokeLinecap="round" style={{ animation: 'spin 0.9s linear infinite' }}>
+    <line x1="12" y1="2"  x2="12" y2="6"/>
+    <line x1="12" y1="18" x2="12" y2="22"/>
+    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+    <line x1="2"  y1="12" x2="6"  y2="12"/>
+    <line x1="18" y1="12" x2="22" y2="12"/>
+    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+    <line x1="16.24" y1="7.76"  x2="19.07" y2="4.93"/>
+  </svg>
+);
+
+const ExportButton: React.FC<Props> = ({
+  label = 'Exporter',
+  onExportCSV,
+  onExportPDF,
+  csvUrl,
+  excelUrl,
+  onDark = false,
+}) => {
+  const { dark }  = useTheme();
+  const [open, setOpen]         = useState(false);
+  const [loadCSV, setLoadCSV]   = useState(false);
+  const [loadXLSX, setLoadXLSX] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  /* Fermer sur clic extérieur */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleCSV = async () => {
     setOpen(false);
     if (csvUrl) {
-      const a = document.createElement('a');
-      a.href = csvUrl;
-      a.download = '';
-      a.click();
-    } else if (onExportCSV) onExportCSV();
+      setLoadCSV(true);
+      try { triggerDownload(csvUrl, 'urgences_CHU_Ibn_Sina.csv'); }
+      finally { setTimeout(() => setLoadCSV(false), 1500); }
+    } else if (onExportCSV) { onExportCSV(); }
   };
 
-  const handleExcel = () => {
+  const handleExcel = async () => {
     setOpen(false);
-    const a = document.createElement('a');
-    a.href = excelUrl || '/api/export/excel';
-    a.download = '';
-    a.click();
+    setLoadXLSX(true);
+    try { triggerDownload(excelUrl || '/api/export/excel', 'CHU_Ibn_Sina_Data.xlsx'); }
+    finally { setTimeout(() => setLoadXLSX(false), 2500); }
   };
 
   const handlePDF = () => { setOpen(false); onExportPDF?.(); };
 
+  /* Thème */
+  const bg     = dark ? '#1e293b' : '#ffffff';
+  const border = dark ? '#334155' : '#E2E8F0';
+  const text   = dark ? '#cbd5e1' : '#475569';
+  const hover  = dark ? '#334155' : '#F8FAFC';
+  const shadow = dark
+    ? '0 8px 24px rgba(0,0,0,0.4)'
+    : '0 8px 24px rgba(15,31,74,0.14)';
+
+  /* Style bouton selon contexte */
+  const btnBg     = onDark ? 'rgba(255,255,255,0.15)' : (dark ? '#1e293b' : '#ffffff');
+  const btnBorder = onDark ? 'rgba(255,255,255,0.28)' : border;
+  const btnText   = onDark ? '#ffffff' : text;
+  const btnShadow = onDark ? 'none' : `0 1px 4px rgba(22,36,84,${dark ? '0.2' : '0.07'})`;
+
+  const isLoading = loadCSV || loadXLSX;
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: '#fff', border: '1.5px solid #E2E8F0',
-        borderRadius: 8, padding: '7px 14px', cursor: 'pointer',
-        fontSize: 12, fontWeight: 600, color: '#475569',
-        boxShadow: '0 1px 4px rgba(22,36,84,0.07)',
-        transition: 'all 0.15s',
-      }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        {label}
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+
+      {/* Bouton principal */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        disabled={isLoading}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: btnBg,
+          border: `1.5px solid ${btnBorder}`,
+          borderRadius: 8, padding: '7px 14px', cursor: isLoading ? 'wait' : 'pointer',
+          fontSize: 12, fontWeight: 600, color: btnText,
+          boxShadow: btnShadow,
+          transition: 'all 0.15s',
+        }}
+      >
+        {isLoading
+          ? <Spinner color={btnText}/>
+          : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          )
+        }
+        {isLoading ? (loadCSV ? 'CSV...' : 'Excel...') : label}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
 
+      {/* Dropdown */}
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', right: 0, marginTop: 4,
-          background: '#fff', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,31,74,0.14)',
-          border: '1px solid #E2E8F0', zIndex: 100, minWidth: 160, overflow: 'hidden',
+          position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+          background: bg, borderRadius: 10,
+          boxShadow: shadow,
+          border: `1px solid ${border}`,
+          zIndex: 1000, minWidth: 200, overflow: 'hidden',
         }}>
+
+          {/* CSV */}
           {(onExportCSV || csvUrl) && (
-            <button onClick={handleCSV} style={{
-              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-              padding: '10px 14px', border: 'none', background: 'none',
-              cursor: 'pointer', fontSize: 13, color: '#475569', textAlign: 'left',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
-              </svg>
-              Exporter CSV
-            </button>
+            <MenuItem
+              onClick={handleCSV}
+              icon={<CsvIcon/>}
+              label="Exporter CSV"
+              sub=".csv · Toutes les données"
+              hover={hover} text={text}
+            />
           )}
-          <button onClick={handleExcel} style={{
-              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-              padding: '10px 14px', border: 'none', background: 'none',
-              cursor: 'pointer', fontSize: 13, color: '#475569', textAlign: 'left',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
-              </svg>
-              Exporter Excel
-            </button>
+
+          {/* Excel */}
+          <MenuItem
+            onClick={handleExcel}
+            icon={<XlsxIcon/>}
+            label="Exporter Excel"
+            sub=".xlsx · 3 feuilles (Urgences, Soins, Établissements)"
+            hover={hover} text={text}
+          />
+
+          {/* PDF */}
           {onExportPDF && (
-            <button onClick={handlePDF} style={{
-              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-              padding: '10px 14px', border: 'none', background: 'none',
-              cursor: 'pointer', fontSize: 13, color: '#475569', textAlign: 'left',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Exporter PDF
-            </button>
+            <MenuItem
+              onClick={handlePDF}
+              icon={<PdfIcon/>}
+              label="Exporter PDF"
+              sub="Rapport officiel CHU Ibn Sina"
+              hover={hover} text={text}
+            />
           )}
         </div>
       )}
     </div>
   );
 };
+
+/* ── Item ligne du dropdown ─── */
+const MenuItem: React.FC<{
+  onClick: () => void; icon: React.ReactNode;
+  label: string; sub: string;
+  hover: string; text: string;
+}> = ({ onClick, icon, label, sub, hover, text }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+      padding: '10px 14px', border: 'none', background: 'none',
+      cursor: 'pointer', textAlign: 'left',
+    }}
+    onMouseEnter={e => (e.currentTarget.style.background = hover)}
+    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+  >
+    <div style={{ flexShrink: 0 }}>{icon}</div>
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: text }}>{label}</div>
+      <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>{sub}</div>
+    </div>
+  </button>
+);
+
+/* ── Icônes formats ─── */
+const CsvIcon = () => (
+  <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+    <rect width="40" height="40" rx="8" fill="#D1FAE5"/>
+    <text x="4" y="27" fontSize="14" fontWeight="800" fill="#065F46" fontFamily="monospace">CSV</text>
+  </svg>
+);
+const XlsxIcon = () => (
+  <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+    <rect width="40" height="40" rx="8" fill="#DCFCE7"/>
+    <text x="2" y="27" fontSize="12" fontWeight="800" fill="#166534" fontFamily="monospace">XLSX</text>
+  </svg>
+);
+const PdfIcon = () => (
+  <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+    <rect width="40" height="40" rx="8" fill="#FEE2E2"/>
+    <text x="3" y="27" fontSize="13" fontWeight="800" fill="#991B1B" fontFamily="monospace">PDF</text>
+  </svg>
+);
 
 export default ExportButton;

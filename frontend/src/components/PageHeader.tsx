@@ -26,21 +26,13 @@ const PageHeader: React.FC<Props> = ({ icon, title, subtitle, badge = '2019–20
         : 'linear-gradient(135deg,#0F1F4A 0%,#1A3BDB 55%,#3B82F6 100%)',
       boxShadow: '0 4px 20px rgba(15,31,74,0.25)',
       position: 'relative',
-      overflow: 'hidden',
+      overflow: 'visible',
     }}>
-      {/* Decorative circle */}
-      <div style={{
-        position: 'absolute', right: -30, top: -30,
-        width: 160, height: 160, borderRadius: '50%',
-        background: 'rgba(255,255,255,0.04)',
-        pointerEvents: 'none',
-      }}/>
-      <div style={{
-        position: 'absolute', right: 60, bottom: -50,
-        width: 100, height: 100, borderRadius: '50%',
-        background: 'rgba(255,255,255,0.03)',
-        pointerEvents: 'none',
-      }}/>
+      {/* Cercles décoratifs — dans un wrapper clippé séparé */}
+      <div style={{ position:'absolute', inset:0, borderRadius:12, overflow:'hidden', pointerEvents:'none' }}>
+        <div style={{ position:'absolute', right:-30, top:-30, width:160, height:160, borderRadius:'50%', background:'rgba(255,255,255,0.04)' }}/>
+        <div style={{ position:'absolute', right:60, bottom:-50, width:100, height:100, borderRadius:'50%', background:'rgba(255,255,255,0.03)' }}/>
+      </div>
 
       {/* Left: icon + text */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>

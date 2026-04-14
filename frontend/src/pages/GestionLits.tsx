@@ -12,7 +12,7 @@ interface Lit {
   service: string;
   type_lit: string;
   statut: string;
-  id_patient: string;
+  
   nom_patient: string;
   date_admission: string;
   updated_at: string;
