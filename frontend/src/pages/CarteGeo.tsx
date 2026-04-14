@@ -61,7 +61,7 @@ const CarteGeo: React.FC = () => {
       <PageHeader
         icon={<IconHospital size={22} color="white" />}
         title="Carte Géographique"
-        subtitle="Localisation et état des 8 établissements CHU Ibn Sina"
+        subtitle={`Localisation et état des ${etabs.length} établissements — CHU Ibn Sina Rabat`}
         badge="Rabat–Salé"
       />
 

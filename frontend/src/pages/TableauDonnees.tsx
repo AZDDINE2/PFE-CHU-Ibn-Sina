@@ -153,7 +153,7 @@ type SortKey = keyof UrgRow | null;
 
 const TableauDonnees: React.FC = () => {
   const { dark } = useTheme();
-  const { exportReport, exporting, pdfBase64, pdfFilename } = usePDF();
+  const { exportReport, exporting, pdfBase64, pdfFilename, pdfError } = usePDF();
   const [emailOpen, setEmailOpen] = useState(false);
   const [rows,    setRows]    = useState<UrgRow[]>([]);
   const [patientRows, setPatientRows] = useState<PatientRow[]>([]);
@@ -351,8 +351,8 @@ const TableauDonnees: React.FC = () => {
       ]),
     });
 
-    // Tableau des données (max 200 lignes pour le PDF)
-    const limit = Math.min(filtered.length, 200);
+    // Tableau des données (max 1000 lignes pour le PDF)
+    const limit = Math.min(filtered.length, 1000);
     sections.push({
       type: 'table',
       title: `Liste des passages (${limit} premiers résultats sur ${filtered.length})`,
@@ -390,18 +390,18 @@ const TableauDonnees: React.FC = () => {
         badge="Données brutes"
         actions={
           <div style={{ display:'flex', gap:8 }}>
-            <ExportButton label="CSV" csvUrl="/api/export/urgences"/>
+            <ExportButton label="CSV" csvUrl="/api/export/urgences" onDark/>
             <button onClick={handleExportPDF} disabled={exporting} style={{
               display:'flex', alignItems:'center', gap:6,
-              padding:'8px 14px', borderRadius:8, border:'none',
-              background: exporting ? '#94a3b8' : 'linear-gradient(135deg,#1a3bdb,#3b82f6)',
+              padding:'8px 14px', borderRadius:8,
+              border:'1px solid rgba(255,255,255,0.28)',
+              background: exporting ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)',
               color:'#fff', fontWeight:700, fontSize:13, cursor: exporting ? 'not-allowed' : 'pointer',
-              boxShadow:'0 2px 8px rgba(59,130,246,0.3)',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               {exporting ? 'Génération...' : 'Rapport PDF'}
             </button>
-            <button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#1a3bdb,#3b82f6)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button>
+            <button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'1px solid rgba(255,255,255,0.28)',cursor:'pointer',background:'rgba(255,255,255,0.15)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button>
           </div>
         }
       />

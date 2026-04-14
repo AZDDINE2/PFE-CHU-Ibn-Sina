@@ -14,7 +14,7 @@ export type PDFSection =
   | { type: 'text';     text: string }
   | { type: 'info';     label: string; value: string };
 
-/* ─── Tronque le texte pour qu'il tienne dans maxW points (évite le retour à la ligne) ─── */
+/* ─── Tronque le texte pour qu'il tienne dans maxW points ─── */
 const fitText = (
   font: { widthOfTextAtSize: (t: string, s: number) => number },
   text: string,
@@ -31,20 +31,20 @@ const fitText = (
   return text.slice(0, lo) + (lo < text.length ? '..' : '');
 };
 
-/* ─── Nettoyage caractères hors WinAnsi (vérification par code) ─── */
+/* ─── Nettoyage caractères hors WinAnsi ─── */
 const sanitize = (s: string | number): string => {
   const str = String(s);
   let out = '';
   for (let i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i);
-    if      (c === 0x202F)              out += ' ';   // narrow no-break space
-    else if (c === 0x00A0)              out += ' ';   // non-breaking space
-    else if (c === 0x2013 || c === 0x2014) out += '-'; // en-dash / em-dash
-    else if (c === 0x2018 || c === 0x2019) out += "'"; // curly single quotes
-    else if (c === 0x201C || c === 0x201D) out += '"'; // curly double quotes
-    else if (c === 0x2026)              out += '...'; // ellipsis
-    else if (c > 0x00FF)               out += ' ';   // tout autre hors Latin-1
-    else                               out += str[i];
+    if      (c === 0x202F)                 out += ' ';
+    else if (c === 0x00A0)                 out += ' ';
+    else if (c === 0x2013 || c === 0x2014) out += '-';
+    else if (c === 0x2018 || c === 0x2019) out += "'";
+    else if (c === 0x201C || c === 0x201D) out += '"';
+    else if (c === 0x2026)                 out += '...';
+    else if (c > 0x00FF)                   out += ' ';
+    else                                   out += str[i];
   }
   return out;
 };
@@ -87,15 +87,12 @@ const generateFromTemplate = async (
 ) => {
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
 
-  /* ── Charger le template source (pour copier ses pages) ── */
   const templateSrc = await PDFDocument.load(templateBytes);
   const pdfDoc      = await PDFDocument.create();
 
-  /* ── Polices Times-Roman (identiques au doc officiel CHU) ── */
   const fontBold   = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontNormal = await pdfDoc.embedFont(StandardFonts.TimesRoman);
 
-  /* ── Constantes typographiques ── */
   const FS_BODY      = 10;
   const FS_SMALL     = 8.5;
   const FS_TABLE     = 9.5;
@@ -107,7 +104,6 @@ const generateFromTemplate = async (
   const DARK         = rgb(0.15, 0.15, 0.15);
   const GREY         = rgb(0.4, 0.4, 0.4);
 
-  /* ── État de pagination (muté par newPage) ── */
   let page!: ReturnType<typeof pdfDoc.getPages>[0];
   let width          = 0;
   let contentTop     = 0;
@@ -115,7 +111,6 @@ const generateFromTemplate = async (
   let curY           = 0;
   let pageCount      = 0;
 
-  /* ── Ajouter une nouvelle page depuis le template ── */
   const newPage = async () => {
     pageCount++;
     const [copied] = await pdfDoc.copyPages(templateSrc, [0]);
@@ -126,30 +121,20 @@ const generateFromTemplate = async (
     const h       = sz.height;
     contentTop    = h - 135;
     contentBottom = 52;
-
-    /* Effacer la zone contenu */
     page.drawRectangle({
       x: 0, y: contentBottom,
       width, height: contentTop - contentBottom,
       color: rgb(1, 1, 1),
     });
-
     curY = contentTop;
   };
 
-  /* ── S'assurer qu'il reste assez de place, sinon nouvelle page ── */
   const ensureSpace = async (needed: number) => {
-    if (curY - needed < contentBottom + 10) {
-      await newPage();
-    }
+    if (curY - needed < contentBottom + 10) await newPage();
   };
 
-  /* ════════════════════════════════════
-     PAGE 1 — Date, filtres, titre
-  ════════════════════════════════════ */
   await newPage();
 
-  /* Date (alignée à droite comme dans le doc officiel) */
   const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   page.drawText(sanitize(`Le ${dateStr}`), {
     x: width - 145, y: contentTop - 16,
@@ -165,7 +150,6 @@ const generateFromTemplate = async (
 
   curY = contentTop - (meta?.reference ? 46 : 32);
 
-  /* Filtres actifs */
   if (meta?.filtres) {
     page.drawText('Filtres appliques :', {
       x: 42, y: curY, size: FS_BODY, font: fontBold, color: BLACK,
@@ -181,7 +165,6 @@ const generateFromTemplate = async (
     curY -= 12;
   }
 
-  /* Titre principal centré, gras, souligné */
   const titleW = fontBold.widthOfTextAtSize(sanitize(pageTitle), FS_TITLE);
   const titleX = (width - titleW) / 2;
   page.drawText(sanitize(pageTitle), {
@@ -189,19 +172,14 @@ const generateFromTemplate = async (
   });
   curY -= 24;
 
-  /* ════════════════════════════════════
-     RENDU DES SECTIONS
-  ════════════════════════════════════ */
   for (const section of sections) {
 
-    /* ── spacer ── */
     if (section.type === 'spacer') {
       await ensureSpace(8);
       curY -= 8;
       continue;
     }
 
-    /* ── title (section) ── */
     if (section.type === 'title') {
       await ensureSpace(24);
       curY -= 4;
@@ -212,7 +190,6 @@ const generateFromTemplate = async (
       continue;
     }
 
-    /* ── subtitle ── */
     if (section.type === 'subtitle') {
       await ensureSpace(LINE_H + 6);
       page.drawText(sanitize(section.text), {
@@ -222,7 +199,6 @@ const generateFromTemplate = async (
       continue;
     }
 
-    /* ── text (paragraphe avec retour à la ligne) ── */
     if (section.type === 'text') {
       const words = sanitize(section.text).split(' ');
       let line = '';
@@ -246,7 +222,6 @@ const generateFromTemplate = async (
       continue;
     }
 
-    /* ── info (label : valeur) ── */
     if (section.type === 'info') {
       await ensureSpace(LINE_H);
       page.drawText(sanitize(`${section.label} :`), {
@@ -259,15 +234,12 @@ const generateFromTemplate = async (
       continue;
     }
 
-    /* ── kpis (grille de cartes) ── */
     if (section.type === 'kpis') {
       const cols     = Math.min(section.items.length, 3);
       const cw       = (width - 84) / cols;
       const ch       = 30;
       const rowCount = Math.ceil(section.items.length / cols);
       const needed   = rowCount * (ch + 5) + 6;
-
-      /* Si le bloc entier ne rentre pas → nouvelle page */
       await ensureSpace(needed);
 
       section.items.forEach((item, i) => {
@@ -275,122 +247,65 @@ const generateFromTemplate = async (
         const row = Math.floor(i / cols);
         const cx  = 42 + col * cw;
         const cy  = curY - ch - row * (ch + 5);
-
-        page.drawRectangle({
-          x: cx, y: cy, width: cw - 4, height: ch,
-          borderColor: BLACK, borderWidth: 0.4, color: rgb(1, 1, 1),
-        });
-        page.drawLine({
-          start: { x: cx, y: cy }, end: { x: cx, y: cy + ch },
-          thickness: 2, color: BLACK,
-        });
-        page.drawText(sanitize(item.label.toUpperCase()), {
-          x: cx + 7, y: cy + ch - 11,
-          size: FS_SMALL, font: fontNormal, color: GREY,
-        });
-        page.drawText(sanitize(String(item.value)), {
-          x: cx + 7, y: cy + 6,
-          size: 14, font: fontBold, color: BLACK,
-        });
+        page.drawRectangle({ x: cx, y: cy, width: cw - 4, height: ch, borderColor: BLACK, borderWidth: 0.4, color: rgb(1, 1, 1) });
+        page.drawLine({ start: { x: cx, y: cy }, end: { x: cx, y: cy + ch }, thickness: 2, color: BLACK });
+        page.drawText(sanitize(item.label.toUpperCase()), { x: cx + 7, y: cy + ch - 11, size: FS_SMALL, font: fontNormal, color: GREY });
+        page.drawText(sanitize(String(item.value)), { x: cx + 7, y: cy + 6, size: 14, font: fontBold, color: BLACK });
       });
 
       curY -= needed;
       continue;
     }
 
-    /* ── table (avec continuation multi-pages) ── */
     if (section.type === 'table') {
       const cols   = section.columns.length;
       const colW   = (width - 84) / cols;
       const rowH   = 14;
       const tableX = 42;
 
-      /* Titre du tableau — centré, gras, souligné */
-      await ensureSpace(rowH * 3 + 14); // au moins titre + header + 1 ligne
+      await ensureSpace(rowH * 3 + 14);
       const ttW = fontBold.widthOfTextAtSize(sanitize(section.title), FS_TITLE_SEC);
       const ttX = (width - ttW) / 2;
-      page.drawText(sanitize(section.title), {
-        x: ttX, y: curY, size: FS_TITLE_SEC, font: fontBold, color: BLACK,
-      });
+      page.drawText(sanitize(section.title), { x: ttX, y: curY, size: FS_TITLE_SEC, font: fontBold, color: BLACK });
       curY -= 12;
 
-      /* Dessiner l'en-tête du tableau sur la page courante */
       const drawTableHeader = () => {
-        page.drawRectangle({
-          x: tableX, y: curY - rowH, width: width - 84, height: rowH,
-          borderColor: BLACK, borderWidth: 0.5, color: rgb(1, 1, 1),
-        });
+        page.drawRectangle({ x: tableX, y: curY - rowH, width: width - 84, height: rowH, borderColor: BLACK, borderWidth: 0.5, color: rgb(1, 1, 1) });
         section.columns.forEach((col, ci) => {
           const cx  = tableX + ci * colW + colW / 2;
           const fit = fitText(fontBold, sanitize(col), FS_HEAD, colW - 6);
           const cw2 = fontBold.widthOfTextAtSize(fit, FS_HEAD);
-          page.drawText(fit, {
-            x: cx - cw2 / 2,
-            y: curY - rowH + (rowH - FS_HEAD) / 2 + 1,
-            size: FS_HEAD, font: fontBold, color: BLACK,
-          });
-          if (ci > 0) {
-            page.drawLine({
-              start: { x: tableX + ci * colW, y: curY - rowH },
-              end:   { x: tableX + ci * colW, y: curY },
-              thickness: 0.4, color: BLACK,
-            });
-          }
+          page.drawText(fit, { x: cx - cw2 / 2, y: curY - rowH + (rowH - FS_HEAD) / 2 + 1, size: FS_HEAD, font: fontBold, color: BLACK });
+          if (ci > 0) page.drawLine({ start: { x: tableX + ci * colW, y: curY - rowH }, end: { x: tableX + ci * colW, y: curY }, thickness: 0.4, color: BLACK });
         });
         curY -= rowH;
       };
 
       drawTableHeader();
 
-      /* Lignes de données — saut de page automatique */
       for (let ri = 0; ri < section.rows.length; ri++) {
-
         if (curY - rowH < contentBottom + 20) {
-          /* Nouvelle page : répéter l'en-tête du tableau */
           await newPage();
-          /* Indicateur de continuation */
-          page.drawText(sanitize(`(suite) ${section.title}`), {
-            x: 42, y: curY - 4,
-            size: FS_SMALL, font: fontNormal, color: GREY,
-          });
+          page.drawText(sanitize(`(suite) ${section.title}`), { x: 42, y: curY - 4, size: FS_SMALL, font: fontNormal, color: GREY });
           curY -= 14;
           drawTableHeader();
         }
-
-        /* Fond alternant (lignes paires légèrement grisées) */
-        page.drawRectangle({
-          x: tableX, y: curY - rowH, width: width - 84, height: rowH,
-          borderColor: BLACK, borderWidth: 0.25,
-          color: ri % 2 === 1 ? rgb(0.97, 0.97, 0.97) : rgb(1, 1, 1),
-        });
-
+        page.drawRectangle({ x: tableX, y: curY - rowH, width: width - 84, height: rowH, borderColor: BLACK, borderWidth: 0.25, color: ri % 2 === 1 ? rgb(0.97, 0.97, 0.97) : rgb(1, 1, 1) });
         section.rows[ri].forEach((cell, ci) => {
           const fit = fitText(fontNormal, sanitize(cell), FS_TABLE, colW - 6);
           const cx  = tableX + ci * colW + colW / 2;
           const tw2 = fontNormal.widthOfTextAtSize(fit, FS_TABLE);
-          page.drawText(fit, {
-            x: cx - tw2 / 2,
-            y: curY - rowH + (rowH - FS_TABLE) / 2 + 1,
-            size: FS_TABLE, font: fontNormal, color: BLACK,
-          });
-          if (ci > 0) {
-            page.drawLine({
-              start: { x: tableX + ci * colW, y: curY - rowH },
-              end:   { x: tableX + ci * colW, y: curY },
-              thickness: 0.25, color: BLACK,
-            });
-          }
+          page.drawText(fit, { x: cx - tw2 / 2, y: curY - rowH + (rowH - FS_TABLE) / 2 + 1, size: FS_TABLE, font: fontNormal, color: BLACK });
+          if (ci > 0) page.drawLine({ start: { x: tableX + ci * colW, y: curY - rowH }, end: { x: tableX + ci * colW, y: curY }, thickness: 0.25, color: BLACK });
         });
-
         curY -= rowH;
       }
-
       curY -= 10;
       continue;
     }
   }
 
-  /* ── Numéros de page dans la zone contenu (haut droit des pages de suite) ── */
+  /* Numéros de page */
   const totalPages = pdfDoc.getPageCount();
   if (totalPages > 1) {
     pdfDoc.getPages().forEach((p, i) => {
@@ -398,12 +313,7 @@ const generateFromTemplate = async (
       const sz = p.getSize();
       const label = `Page ${i + 1} / ${totalPages}`;
       const lw = fontNormal.widthOfTextAtSize(label, FS_SMALL);
-      /* Juste sous l'en-tête institutionnel, à droite — hors zone footer */
-      p.drawText(label, {
-        x: sz.width - 42 - lw,
-        y: sz.height - 135 - 12,
-        size: FS_SMALL, font: fontNormal, color: GREY,
-      });
+      p.drawText(label, { x: sz.width - 42 - lw, y: sz.height - 135 - 12, size: FS_SMALL, font: fontNormal, color: GREY });
     });
   }
 
@@ -411,7 +321,7 @@ const generateFromTemplate = async (
 };
 
 /* ═══════════════════════════════════════════════════════════
-   MODE FALLBACK — jsPDF (si template_chu.pdf absent)
+   MODE FALLBACK — jsPDF
 ═══════════════════════════════════════════════════════════ */
 const generateFallback = async (
   _filename: string,
@@ -447,13 +357,57 @@ const generateFallback = async (
   pdf.setLineWidth(0.4);
   pdf.line(pw / 2 - tw / 2, 39.5, pw / 2 + tw / 2, 39.5);
 
+  const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  pdf.setFontSize(8);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(`Le ${dateStr}`, pw - 14, 18, { align: 'right' });
+
   let y = 48;
   for (const section of sections) {
-    if (section.type === 'table') {
+    if (section.type === 'title') {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(section.text.toUpperCase(), 14, y);
+      y += 6;
+    } else if (section.type === 'subtitle') {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(section.text, 14, y);
+      y += 5;
+    } else if (section.type === 'text') {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(60, 60, 60);
+      const lines = pdf.splitTextToSize(section.text, pw - 28);
+      pdf.text(lines, 14, y);
+      y += lines.length * 4 + 2;
+    } else if (section.type === 'kpis') {
+      const cols = Math.min(section.items.length, 3);
+      const cw = (pw - 28) / cols;
+      section.items.forEach((item, i) => {
+        const cx = 14 + (i % cols) * cw;
+        const cy = y + Math.floor(i / cols) * 16;
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.25);
+        pdf.rect(cx, cy - 3, cw - 2, 14);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(item.label.toUpperCase().slice(0, 22), cx + 2, cy + 2);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(String(item.value).slice(0, 18), cx + 2, cy + 9);
+      });
+      y += Math.ceil(section.items.length / cols) * 17 + 4;
+    } else if (section.type === 'table') {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
       pdf.text(section.title, pw / 2, y, { align: 'center' });
-      y += 6;
+      y += 4;
       autoTable(pdf, {
         startY: y,
         head: [section.columns],
@@ -463,7 +417,6 @@ const generateFallback = async (
         headStyles: { fillColor: false as any, textColor: [0,0,0], fontStyle: 'bold', lineWidth: 0.4 },
         alternateRowStyles: { fillColor: false as any },
         didDrawPage: () => {
-          /* répéter en-tête minimal sur nouvelles pages */
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(8);
           pdf.setTextColor(100, 100, 100);
@@ -471,6 +424,8 @@ const generateFallback = async (
         },
       });
       y = (pdf as any).lastAutoTable.finalY + 8;
+    } else if (section.type === 'spacer') {
+      y += 5;
     }
   }
 
@@ -484,22 +439,27 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
   return btoa(binary);
 };
 
-/* ─── Téléchargement des bytes ─── */
+/* ─── Téléchargement ─── */
 const downloadBytes = (bytes: Uint8Array, filename: string) => {
   const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
 };
 
 /* ═══════════════════════════════════════════════════════════
    Hook React
 ═══════════════════════════════════════════════════════════ */
 export const usePDF = (_filename = 'rapport_CHU_Ibn_Sina.pdf') => {
-  const [exporting,  setExporting]  = useState(false);
-  const [pdfBase64,  setPdfBase64]  = useState<string | undefined>(undefined);
-  const [pdfFilename,setPdfFilename]= useState<string>('rapport_CHU.pdf');
+  const [exporting,   setExporting]  = useState(false);
+  const [pdfBase64,   setPdfBase64]  = useState<string | undefined>(undefined);
+  const [pdfFilename, setPdfFilename]= useState<string>('rapport_CHU.pdf');
+  const [pdfError,    setPdfError]   = useState<string | undefined>(undefined);
 
   const exportPDF = async (_elementId: string) => {
     console.warn('Déprécié. Utilisez exportReport.');
@@ -512,14 +472,19 @@ export const usePDF = (_filename = 'rapport_CHU_Ibn_Sina.pdf') => {
     meta?: { reference?: string; filtres?: string },
   ) => {
     setExporting(true);
+    setPdfError(undefined);
     try {
       const b64 = await generatePDF(filename, pageTitle, sections, meta);
       setPdfBase64(b64);
       setPdfFilename(filename);
+    } catch (err: any) {
+      const msg = err?.message ?? 'Erreur lors de la génération du PDF.';
+      setPdfError(msg);
+      console.error('[usePDF]', err);
     } finally {
       setExporting(false);
     }
   };
 
-  return { exportPDF, exportReport, exporting, pdfBase64, pdfFilename };
+  return { exportPDF, exportReport, exporting, pdfBase64, pdfFilename, pdfError };
 };

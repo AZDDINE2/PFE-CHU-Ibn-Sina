@@ -20,12 +20,13 @@ interface Personnel {
   updated_at: string;
 }
 
-const STATUTS_PERS = ['En service', 'En garde', 'En conge', 'Repos'];
+const STATUTS_PERS = ['En service', 'En garde', 'En congé', 'Repos'];
 
 const STATUT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
   'En service': { bg: '#D1FAE5', color: '#065F46', border: '#10B981' },
   'En garde':   { bg: '#FEF3C7', color: '#D97706', border: '#F59E0B' },
-  'En conge':   { bg: '#DBEAFE', color: '#1D4ED8', border: '#3B82F6' },
+  'En congé':   { bg: '#DBEAFE', color: '#1D4ED8', border: '#3B82F6' },
+  'En conge':   { bg: '#DBEAFE', color: '#1D4ED8', border: '#3B82F6' }, // compat anciennes données
   'Repos':      { bg: '#F1F5F9', color: '#64748B', border: '#94A3B8' },
 };
 

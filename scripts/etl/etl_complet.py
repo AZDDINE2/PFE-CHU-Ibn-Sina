@@ -88,7 +88,7 @@ u = urg.copy()
 
 # Supprimer doublons
 avant = len(u)
-u = u.drop_duplicates(subset=['id_urgence'])
+u = u.drop_duplicates(subset=['IPP'])
 log.info(f"Urgences doublons supprimés : {avant - len(u)}")
 
 # Dates
@@ -190,8 +190,8 @@ ug = ug.drop(columns=['date_h', 'flux_h'])
 
 # Renommer colonnes pour Gold
 rename_map = {
-    'id_urgence'       : 'ID_Urgence',
-    'id_patient'       : 'ID_Patient',
+    'IPP'       : 'IPP',
+    'IPP_src': 'IPP',
     'nom_complet'      : 'Nom_Complet',
     'age'              : 'Age',
     'sexe'             : 'Sexe',
@@ -215,7 +215,7 @@ ug = ug.rename(columns=rename_map)
 
 # Sélectionner colonnes Gold finales
 cols_gold = [
-    'ID_Urgence','ID_Patient','Nom_Complet','Age','Sexe','Wilaya','Groupe_Sanguin',
+    'IPP','IPP','Nom_Complet','Age','Sexe','Wilaya','Groupe_Sanguin',
     'Antecedents','Etablissement','Type_Etab','Ville','Date_Arrivee','Date_Sortie',
     'Niveau_Triage','Motif_Consultation','Orientation','Duree_Sejour_min',
     'Nb_Medecins_Dispo','Nb_Lits_Dispo','Jour_Ferie','Saison','Heure_Arrivee',
@@ -245,7 +245,7 @@ sg = sg.rename(columns={
     'niveau_triage'       : 'niveau_triage',
 })
 
-cols_soins = ['id_soin','id_urgence','Etablissement','Age','Sexe','niveau_triage',
+cols_soins = ['id_soin','IPP','Etablissement','Age','Sexe','niveau_triage',
               'Type_Soin','Medicament','Medecin','Cout_Soin','Duree_Soin_Min','Resultat','Date_Soin']
 cols_soins = [c for c in cols_soins if c in sg.columns]
 sg = sg[cols_soins]
@@ -258,7 +258,7 @@ eg = e.copy()
 
 # Agrégats depuis urgences Gold
 stats = ug.groupby('Etablissement').agg(
-    Nb_Patients   = ('ID_Urgence', 'count'),
+    Nb_Patients   = ('IPP', 'count'),
     Duree_Moy_Min = ('Duree_Sejour_min', 'mean'),
 ).reset_index()
 

@@ -199,7 +199,7 @@ const Login: React.FC = () => {
 
         <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1A2640', textAlign: 'center' }}>
           <span style={{ fontSize: 11, color: '#2D4060' }}>
-            CHU Ibn Sina Rabat · Système de gestion des urgences · 2025
+            CHU Ibn Sina Rabat · Système de gestion des urgences · {new Date().getFullYear()}
           </span>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { usePageTheme } from '../theme';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 interface Patient {
-  id_urgence: string;
+  IPP: string;
   nom_complet: string;
   age: number;
   sexe: string;
@@ -117,14 +117,14 @@ const PatientsActuels: React.FC = () => {
   const updateStatut = async (idUrgence: string, statut: string, lit_numero?: string) => {
     setUpdating(idUrgence);
     const token = localStorage.getItem('token');
-    const patient = patients.find(p => p.id_urgence === idUrgence);
+    const patient = patients.find(p => p.IPP === idUrgence);
     try {
       await axios.patch(`/api/patients/${idUrgence}/statut`, {
         statut,
         lit_numero: lit_numero ?? patient?.lit_numero ?? '',
       }, { headers: { Authorization: `Bearer ${token}` } });
       setPatients(prev => prev.map(p =>
-        p.id_urgence === idUrgence
+        p.IPP === idUrgence
           ? { ...p, statut, lit_numero: lit_numero ?? p.lit_numero }
           : p
       ));
@@ -177,7 +177,7 @@ const PatientsActuels: React.FC = () => {
     const triageLevel = p.niveau_triage?.slice(0,2) || 'P3';
     const tc = TRIAGE_COLORS[triageLevel] || '#94A3B8';
     return (
-      <tr key={p.id_urgence} style={{ background: rowBg, borderBottom: `1px solid ${border}` }}>
+      <tr key={p.IPP} style={{ background: rowBg, borderBottom: `1px solid ${border}` }}>
         <td style={{ padding: '10px 14px', color: muted, fontWeight: 600, fontSize: 14 }}>{p.heure_arrivee}</td>
         <td style={{ padding: '10px 14px', fontWeight: 700, color: text }}>{p.nom_complet}</td>
         <td style={{ padding: '10px 14px', color: muted, fontSize: 12 }}>{p.cin || '—'}</td>
@@ -190,10 +190,10 @@ const PatientsActuels: React.FC = () => {
         <td style={{ padding: '10px 14px', color: text, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.motif}</td>
         <td style={{ padding: '10px 14px' }}>
           <select
-            disabled={updating === p.id_urgence}
+            disabled={updating === p.IPP}
             value={p.lit_numero || ''}
             onFocus={() => loadLits(p.etablissement)}
-            onChange={e => updateStatut(p.id_urgence, p.statut, e.target.value)}
+            onChange={e => updateStatut(p.IPP, p.statut, e.target.value)}
             style={{ width: 80, padding: '4px 6px', borderRadius: 6, fontSize: 12, border: `1px solid ${p.lit_numero ? '#3B82F6' : border}`, background: p.lit_numero ? '#EFF6FF' : cardBg, color: p.lit_numero ? '#1D4ED8' : muted, fontWeight: p.lit_numero ? 700 : 400, cursor: 'pointer' }}
           >
             <option value="">— Lit —</option>
@@ -210,10 +210,10 @@ const PatientsActuels: React.FC = () => {
         </td>
         <td style={{ padding: '10px 14px' }}>
           <select
-            disabled={updating === p.id_urgence}
+            disabled={updating === p.IPP}
             value={p.statut}
-            onChange={e => updateStatut(p.id_urgence, e.target.value)}
-            style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: `1px solid ${border}`, background: cardBg, color: text, cursor: 'pointer', opacity: updating === p.id_urgence ? 0.5 : 1 }}
+            onChange={e => updateStatut(p.IPP, e.target.value)}
+            style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: `1px solid ${border}`, background: cardBg, color: text, cursor: 'pointer', opacity: updating === p.IPP ? 0.5 : 1 }}
           >
             {STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -366,7 +366,7 @@ const PatientsActuels: React.FC = () => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                         <TableHeader />
                         <tbody>
-                          {etabPatients.map((p, i) => <PatientRow key={p.id_urgence} p={p} i={i} />)}
+                          {etabPatients.map((p, i) => <PatientRow key={p.IPP} p={p} i={i} />)}
                         </tbody>
                       </table>
                     </div>
@@ -397,7 +397,7 @@ const PatientsActuels: React.FC = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <TableHeader />
                 <tbody>
-                  {tableFiltered.map((p, i) => <PatientRow key={p.id_urgence} p={p} i={i} />)}
+                  {tableFiltered.map((p, i) => <PatientRow key={p.IPP} p={p} i={i} />)}
                 </tbody>
               </table>
             </div>

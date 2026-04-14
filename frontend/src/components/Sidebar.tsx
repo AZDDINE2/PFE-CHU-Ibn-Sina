@@ -66,7 +66,7 @@ const SECTIONS = [
       { to: '/',               label: 'KPIs Globaux',        Icon: () => <IconDashboard size={16} color="currentColor"/> },
       { to: '/temporel',       label: 'Analyse Temporelle',  Icon: () => <IconChart size={16} color="currentColor"/> },
       { to: '/etablissements', label: 'Établissements',      Icon: () => <IconHospital size={16} color="currentColor"/> },
-      { to: '/predictions',    label: 'Prédictions IA',      Icon: () => <IconBrain size={16} color="currentColor"/> },
+      { to: '/predictions',    label: 'Prédiction ML',       Icon: () => <IconBrain size={16} color="currentColor"/> },
       { to: '/soins',          label: 'Soins Médicaux',      Icon: () => <IconPill size={16} color="currentColor"/> },
     ],
   },
@@ -84,7 +84,7 @@ const SECTIONS = [
     label: 'Administration',
     items: [
       { to: '/carte',        label: 'Carte Géographique', Icon: () => <Ico.Map s={16}/> },
-      { to: '/tableau',      label: 'Données Brutes',     Icon: () => <IconUsers size={16} color="currentColor"/> },
+      { to: '/tableau',      label: 'Tableau des Données', Icon: () => <IconUsers size={16} color="currentColor"/> },
       { to: '/alertes',      label: 'Alertes & Seuils',   Icon: () => <IconBell size={16} color="currentColor"/> },
       { to: '/utilisateurs', label: 'Utilisateurs',       Icon: () => <Ico.Settings s={16}/> },
     ],

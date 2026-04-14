@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import StaticPool, NullPool
+import sqlite3
 import time
 
 try:
@@ -79,12 +80,10 @@ app.add_middleware(
 data = {}
 
 def get_urg() -> pd.DataFrame:
-    """Lire depuis le cache mémoire (rechargé au startup et après admission)."""
+    """Lire depuis le cache mémoire. Ne jamais appeler reload_urg() en synchrone depuis HTTP."""
     df = data.get("urg", pd.DataFrame())
-    if df.empty and engine:
-        reload_urg()
-        df = data.get("urg", pd.DataFrame())
-    df["Date_Arrivee"] = pd.to_datetime(df["Date_Arrivee"], errors="coerce")
+    if not df.empty:
+        df["Date_Arrivee"] = pd.to_datetime(df["Date_Arrivee"], errors="coerce")
     return df
 
 def get_soins() -> pd.DataFrame:
@@ -92,138 +91,76 @@ def get_soins() -> pd.DataFrame:
     return data.get("soins", pd.DataFrame())
 
 def reload_urg():
-    """Recharge les données depuis SQLite en mémoire."""
+    """Recharge TOUTES les données depuis SQLite en mémoire (sqlite3 direct pour perf)."""
     if engine:
-        df = pd.read_sql('SELECT * FROM urgences', engine)
+        db_path = DATABASE_URL.replace("sqlite:////", "/").replace("sqlite:///", "")
+        conn_lite = sqlite3.connect(db_path, timeout=120)
+        df = pd.read_sql_query(
+            'SELECT * FROM urgences WHERE Annee IS NOT NULL',
+            conn_lite
+        )
+        conn_lite.close()
         df["Date_Arrivee"] = pd.to_datetime(df["Date_Arrivee"], errors="coerce")
         data["urg"] = df
+        print(f"Urgences chargées : {len(df):,} lignes")
 
 
-@app.on_event("startup")
-def load_data():
+def _load_data_background():
+    """Charge toutes les données en arrière-plan (appelé dans un thread)."""
     try:
-        # ── PostgreSQL : créer les tables si elles n'existent pas (sans CSV) ─
-        if engine:
-            with engine.connect() as conn:
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS urgences_bronze (
-                        id_urgence    INTEGER PRIMARY KEY AUTOINCREMENT,
-                        id_patient    INTEGER,
-                        nom_complet   TEXT,
-                        age           INTEGER,
-                        sexe          TEXT,
-                        cin           TEXT DEFAULT '',
-                        groupe_sanguin TEXT,
-                        antecedents   TEXT,
-                        etablissement TEXT,
-                        type_etab     TEXT,
-                        ville         TEXT,
-                        date_arrivee  TEXT,
-                        date_sortie   TEXT,
-                        niveau_triage TEXT,
-                        motif_consultation TEXT,
-                        orientation   TEXT,
-                        duree_sejour_min INTEGER,
-                        nb_medecins_dispo INTEGER,
-                        nb_lits_dispo INTEGER,
-                        jour_ferie    INTEGER DEFAULT 0,
-                        mutuelle      TEXT DEFAULT 'Payant',
-                        prix_sejour   REAL DEFAULT 0,
-                        prix_soins    REAL DEFAULT 0
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS urgences (
-                        "ID_Urgence"        TEXT,
-                        "ID_Patient"        TEXT,
-                        "Nom_Complet"       TEXT,
-                        "Age"               INTEGER,
-                        "Sexe"              VARCHAR(5),
-                        "CIN"               VARCHAR(20) DEFAULT '',
-                        "Groupe_Sanguin"    VARCHAR(10),
-                        "Antecedents"       TEXT,
-                        "Etablissement"     TEXT,
-                        "Type_Etab"         VARCHAR(50),
-                        "Ville"             VARCHAR(100),
-                        "Date_Arrivee"      TIMESTAMP,
-                        "Date_Sortie"       TIMESTAMP,
-                        "Niveau_Triage"     TEXT,
-                        "Motif_Consultation" TEXT,
-                        "Orientation"       TEXT,
-                        "Duree_Sejour_min"  INTEGER,
-                        "Nb_Medecins_Dispo" INTEGER,
-                        "Nb_Lits_Dispo"     INTEGER,
-                        "Jour_Ferie"        INTEGER,
-                        "Saison"            TEXT,
-                        "Heure_Arrivee"     INTEGER,
-                        "Jour_Semaine"      INTEGER,
-                        "Mois"              INTEGER,
-                        "Annee"             INTEGER,
-                        "Tranche_Horaire"   TEXT,
-                        "Nom_Jour"          TEXT,
-                        "Groupe_Age"        TEXT,
-                        "Est_Pic"           INTEGER,
-                        "Mutuelle"          VARCHAR(50),
-                        "Prix_Sejour"       FLOAT,
-                        "Prix_Soins"        FLOAT
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS soins_bronze (
-                        id_soin       BIGSERIAL PRIMARY KEY,
-                        id_urgence    BIGINT,
-                        id_patient    BIGINT,
-                        type_soin     TEXT,
-                        description   TEXT,
-                        cout          FLOAT,
-                        date_soin     TIMESTAMP
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS soins (
-                        "ID_Soin"       TEXT,
-                        "ID_Urgence"    TEXT,
-                        "ID_Patient"    TEXT,
-                        "Type_Soin"     TEXT,
-                        "Description"   TEXT,
-                        "Cout"          FLOAT,
-                        "Date_Soin"     TIMESTAMP
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS etablissements_bronze (
-                        id            BIGSERIAL PRIMARY KEY,
-                        nom           TEXT,
-                        type_etab     TEXT,
-                        ville         TEXT,
-                        wilaya        TEXT,
-                        capacite      INTEGER,
-                        nb_medecins   INTEGER
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS etablissements (
-                        "Nom"           TEXT,
-                        "Type_Etab"     TEXT,
-                        "Ville"         TEXT,
-                        "Wilaya"        TEXT,
-                        "Capacite"      INTEGER,
-                        "Nb_Medecins"   INTEGER
-                    )
-                """))
-                conn.commit()
-            print("Tables PostgreSQL créées (ou déjà existantes).")
+        _do_load_data()
+    except Exception as e:
+        print(f"ERREUR chargement background : {e}")
 
-        # ── Charger en mémoire depuis PostgreSQL ou vide ──────────────
+def _do_load_data():
+    """Logique complète de chargement."""
+    try:
+        # ── Init tables via sqlite3 direct (évite tout verrou SQLAlchemy) ──
+        if DATABASE_URL.startswith("sqlite"):
+            db_path = DATABASE_URL.replace("sqlite:////", "/").replace("sqlite:///", "")
+            _c = sqlite3.connect(db_path, timeout=30)
+            _c.execute("PRAGMA journal_mode=WAL")
+            _c.execute("PRAGMA synchronous=NORMAL")
+            # Tables bronze légères – ignorées si déjà existantes
+            _c.executescript("""
+                CREATE TABLE IF NOT EXISTS urgences_bronze (
+                    IPP INTEGER PRIMARY KEY AUTOINCREMENT,
+                    etablissement TEXT, orientation TEXT, niveau_triage TEXT
+                );
+                CREATE TABLE IF NOT EXISTS soins_bronze (
+                    id_soin INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type_soin TEXT, cout FLOAT
+                );
+                CREATE TABLE IF NOT EXISTS etablissements_bronze (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nom TEXT, type_etab TEXT, ville TEXT
+                );
+            """)
+            _c.commit()
+            _c.close()
+        elif engine:
+            # PostgreSQL : utiliser SQLAlchemy uniquement pour PG
+            with engine.connect() as conn:
+                conn.execute(text("CREATE TABLE IF NOT EXISTS urgences_bronze (id BIGSERIAL PRIMARY KEY, etablissement TEXT)"))
+                conn.commit()
+        print("Tables initialisées.")
+
+        # ── Charger en mémoire (sqlite3 direct, sans verrou SQLAlchemy) ──
         reload_urg()
 
         if engine:
+            db_path = DATABASE_URL.replace("sqlite:////", "/").replace("sqlite:///", "")
             try:
-                data["soins"] = pd.read_sql('SELECT * FROM soins', engine)
+                conn_lite = sqlite3.connect(db_path, timeout=120)
+                data["soins"] = pd.read_sql_query('SELECT * FROM soins', conn_lite)
+                conn_lite.close()
+                print(f"Soins chargés : {len(data['soins']):,} lignes")
             except Exception:
                 data["soins"] = pd.DataFrame()
             try:
-                data["etab"] = pd.read_sql('SELECT * FROM etablissements', engine)
+                conn_lite = sqlite3.connect(db_path, timeout=30)
+                data["etab"] = pd.read_sql_query('SELECT * FROM etablissements', conn_lite)
+                conn_lite.close()
             except Exception:
                 data["etab"] = pd.DataFrame()
         else:
@@ -258,7 +195,7 @@ def load_data():
             with engine.connect() as conn:
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS patient_statuts (
-                        id_urgence TEXT PRIMARY KEY,
+                        IPP TEXT PRIMARY KEY,
                         statut     TEXT NOT NULL,
                         lit_numero TEXT DEFAULT '',
                         updated_at TEXT,
@@ -277,6 +214,24 @@ def load_data():
         print(f"ERREUR chargement : {e}")
 
 
+@app.on_event("startup")
+def load_data():
+    """Démarre le chargement des données dans un thread background."""
+    import threading
+    # Créer les tables en synchrone (rapide), puis charger les données en background
+    try:
+        if engine:
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA journal_mode=WAL"))
+                conn.execute(text("PRAGMA synchronous=NORMAL"))
+            _init_users_table()
+    except Exception as e:
+        print(f"Init DB erreur : {e}")
+    t = threading.Thread(target=_load_data_background, daemon=True)
+    t.start()
+    print("Chargement des données démarré en arrière-plan...")
+
+
 def clean(val):
     """Convertit NaN/inf en None pour JSON."""
     if isinstance(val, float) and (np.isnan(val) or np.isinf(val)):
@@ -290,6 +245,22 @@ def df_to_records(df):
          for k, v in row.items()}
         for row in df.to_dict(orient="records")
     ]
+
+
+# ══════════════════════════════════════════════════════════════
+# STATUS — indique si les données sont prêtes
+# ══════════════════════════════════════════════════════════════
+@app.get("/api/status")
+def get_status():
+    urg_loaded  = not data.get("urg",  pd.DataFrame()).empty
+    soins_loaded = not data.get("soins", pd.DataFrame()).empty
+    return {
+        "ready": urg_loaded and soins_loaded,
+        "urg_loaded": urg_loaded,
+        "soins_loaded": soins_loaded,
+        "urg_rows": len(data["urg"]) if urg_loaded else 0,
+        "soins_rows": len(data["soins"]) if soins_loaded else 0,
+    }
 
 
 # ══════════════════════════════════════════════════════════════
@@ -557,6 +528,11 @@ def get_maladies_saisonnieres():
 @app.get("/api/etablissements")
 def get_etablissements():
     try:
+        # Toujours lire depuis la DB pour avoir les stats à jour
+        if engine:
+            df = pd.read_sql('SELECT * FROM etablissements ORDER BY Nb_Patients DESC', engine)
+            data["etab"] = df
+            return df_to_records(df)
         return df_to_records(data["etab"])
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -715,7 +691,17 @@ def get_predictions():
 @app.get("/api/modeles/metriques")
 def get_metriques():
     try:
-        return df_to_records(data["metrics"])
+        # Charger directement si le thread background n'a pas encore fini
+        df = data.get("metrics")
+        if df is None or (hasattr(df, 'empty') and df.empty):
+            df = pd.read_csv(os.path.join(MODELS, "metrics_comparison.csv"), encoding="utf-8-sig")
+        # round(v, 4) pour préserver la précision R² (0.9557 et non 0.96)
+        return [
+            {k: (None if isinstance(v, float) and (np.isnan(v) or np.isinf(v))
+                 else round(v, 4) if isinstance(v, float) else v)
+             for k, v in row.items()}
+            for row in df.to_dict(orient="records")
+        ]
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -1025,10 +1011,29 @@ COORDS = {
 }
 
 @app.get("/api/urgences/liste")
-def get_urgences_liste(limit: int = 20000):
+def get_urgences_liste(
+    limit: int = 10000,
+    offset: int = 0,
+    annee: str = "",
+    etablissement: str = "",
+    niveau: str = "",
+    orientation: str = "",
+):
     try:
         urg = get_urg()
-        cols = ["ID_Urgence", "Nom_Complet", "CIN", "Age", "Sexe",
+        # Filtres optionnels
+        if annee:
+            annees = [int(a) for a in annee.split(",") if a.strip().isdigit()]
+            if annees and "Annee" in urg.columns:
+                urg = urg[urg["Annee"].isin(annees)]
+        if etablissement and etablissement != "Tous" and "Etablissement" in urg.columns:
+            urg = urg[urg["Etablissement"] == etablissement]
+        if niveau and niveau != "Tous" and "Niveau_Triage" in urg.columns:
+            urg = urg[urg["Niveau_Triage"] == niveau]
+        if orientation and orientation != "Tous" and "Orientation" in urg.columns:
+            urg = urg[urg["Orientation"] == orientation]
+
+        cols = ["IPP", "Nom_Complet", "CIN", "Age", "Sexe",
                 "Groupe_Sanguin", "Antecedents", "Niveau_Triage", "Date_Arrivee",
                 "Etablissement", "Orientation", "Duree_Sejour_min", "Saison", "Annee",
                 "Mutuelle", "Prix_Sejour", "Prix_Soins"]
@@ -1036,10 +1041,13 @@ def get_urgences_liste(limit: int = 20000):
         df = urg[available].copy()
         if "Date_Arrivee" in df.columns:
             df = df.sort_values("Date_Arrivee", ascending=False)
-        df = df.head(limit)
+
+        # Limiter à 50 000 lignes max pour éviter les timeouts navigateur
+        limit = min(limit, 50000)
+        df    = df.iloc[offset: offset + limit]
         df["Date_Arrivee"] = df["Date_Arrivee"].astype(str)
-        if "ID_Urgence" in df.columns:
-            df = df.rename(columns={"ID_Urgence": "id_passage"})
+        if "IPP" in df.columns:
+            df = df.rename(columns={"IPP": "id_passage"})
         return df_to_records(df)
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -1051,7 +1059,7 @@ def get_patients_liste():
     try:
         urg = get_urg().copy()
         urg["Date_Arrivee"] = pd.to_datetime(urg["Date_Arrivee"], errors="coerce")
-        urg = urg.sort_values("Date_Arrivee", ascending=False).head(20000)
+        urg = urg.sort_values("Date_Arrivee", ascending=False).head(30000)
 
         TRIAGE_ORDER = {"P1 - Critique": 1, "P2 - Urgent": 2, "P3 - Semi-urgent": 3, "P4 - Non urgent": 4}
 
@@ -1064,7 +1072,7 @@ def get_patients_liste():
             historique = []
             for _, row in grp.iterrows():
                 historique.append({
-                    "id_passage":    str(row.get("ID_Urgence", "")),
+                    "id_passage":    str(row.get("IPP", "")),
                     "date":          str(row["Date_Arrivee"])[:10] if pd.notna(row["Date_Arrivee"]) else "",
                     "niveau_triage": str(row.get("Niveau_Triage", "")),
                     "motif":         str(row.get("Motif_Consultation", "")),
@@ -1399,13 +1407,13 @@ def add_patient(body: AdmissionBody, creds: HTTPAuthorizationCredentials = Depen
         # IDs auto-incrémentés — compatible SQLite et PostgreSQL
         try:
             with engine.connect() as conn:
-                val = conn.execute(text('SELECT MAX(CAST("ID_Urgence" AS INTEGER)) FROM urgences')).scalar()
+                val = conn.execute(text('SELECT MAX(CAST("IPP" AS INTEGER)) FROM urgences')).scalar()
             max_id_urg = int(val or 0) + 1
         except Exception:
             max_id_urg = int(df.shape[0]) + 1
         try:
             with engine.connect() as conn:
-                val = conn.execute(text('SELECT MAX(CAST("ID_Patient" AS INTEGER)) FROM urgences')).scalar()
+                val = conn.execute(text('SELECT MAX(CAST("IPP" AS INTEGER)) FROM urgences')).scalar()
             max_id_pat = int(val or 0) + 1
         except Exception:
             max_id_pat = int(df.shape[0]) + 1
@@ -1421,8 +1429,8 @@ def add_patient(body: AdmissionBody, creds: HTTPAuthorizationCredentials = Depen
         groupe_age = "Enfant" if age < 15 else "Adulte jeune" if age < 30 else "Adulte" if age < 60 else "Senior"
 
         new_row = {
-            "ID_Urgence":          max_id_urg,
-            "ID_Patient":          max_id_pat,
+            "IPP":          max_id_urg,
+            "IPP_generated": None,
             "Nom_Complet":         body.nom_complet,
             "CIN":                 body.cin,
             "Age":                 body.age,
@@ -1469,7 +1477,7 @@ def add_patient(body: AdmissionBody, creds: HTTPAuthorizationCredentials = Depen
         # Recharger en mémoire
         reload_urg()
 
-        return {"success": True, "id_urgence": new_row["ID_Urgence"], "id_patient": new_row["ID_Patient"]}
+        return {"success": True, "IPP": new_row["IPP"]}
     except Exception as e:
         import traceback
         print("ADMISSION ERROR:", traceback.format_exc())
@@ -1640,7 +1648,7 @@ def run_pipeline(creds: HTTPAuthorizationCredentials = Depends(security)):
 
         # ── Renommer colonnes bronze → gold ────────────────────────
         rename_map = {
-            "id_urgence": "ID_Urgence", "id_patient": "ID_Patient",
+            "IPP": "IPP",
             "nom_complet": "Nom_Complet", "age": "Age", "sexe": "Sexe",
             "cin": "CIN", "groupe_sanguin": "Groupe_Sanguin",
             "antecedents": "Antecedents", "etablissement": "Etablissement",
@@ -1652,7 +1660,7 @@ def run_pipeline(creds: HTTPAuthorizationCredentials = Depends(security)):
         df = df.rename(columns=rename_map)
 
         gold_cols = [
-            "ID_Urgence","ID_Patient","Nom_Complet","Age","Sexe","CIN","Groupe_Sanguin",
+            "IPP","Nom_Complet","Age","Sexe","CIN","Groupe_Sanguin",
             "Antecedents","Etablissement","Type_Etab","Ville","Date_Arrivee","Date_Sortie",
             "Niveau_Triage","Motif_Consultation","Orientation","Duree_Sejour_min",
             "Nb_Medecins_Dispo","Nb_Lits_Dispo","Jour_Ferie","Saison","Heure_Arrivee",
@@ -1665,9 +1673,9 @@ def run_pipeline(creds: HTTPAuthorizationCredentials = Depends(security)):
         # (ne jamais écraser le Gold pour préserver les patients admis manuellement)
         with engine.connect() as _conn:
             existing_ids = set(
-                pd.read_sql('SELECT DISTINCT "ID_Urgence" FROM urgences', engine)["ID_Urgence"].astype(str)
+                pd.read_sql('SELECT DISTINCT "IPP" FROM urgences', engine)["IPP"].astype(str)
             )
-        df_gold["_id_str"] = df_gold["ID_Urgence"].astype(str)
+        df_gold["_id_str"] = df_gold["IPP"].astype(str)
         df_new = df_gold[~df_gold["_id_str"].isin(existing_ids)].drop(columns=["_id_str"])
         df_gold.drop(columns=["_id_str"], inplace=True, errors="ignore")
 
@@ -1760,7 +1768,7 @@ def get_patients_aujourd_hui(creds: HTTPAuthorizationCredentials = Depends(secur
         if engine:
             try:
                 with engine.connect() as conn:
-                    rows = conn.execute(text("SELECT id_urgence, statut, lit_numero, updated_at, updated_by FROM patient_statuts")).fetchall()
+                    rows = conn.execute(text("SELECT IPP, statut, lit_numero, updated_at, updated_by FROM patient_statuts")).fetchall()
                     for r in rows:
                         statuts[str(r[0])] = {"statut": r[1], "lit_numero": r[2] or "", "updated_at": r[3], "updated_by": r[4]}
             except Exception:
@@ -1768,10 +1776,10 @@ def get_patients_aujourd_hui(creds: HTTPAuthorizationCredentials = Depends(secur
 
         results = []
         for _, row in df.iterrows():
-            id_urg = str(row.get("ID_Urgence", ""))
+            id_urg = str(row.get("IPP", ""))
             st_info = statuts.get(id_urg, {})
             results.append({
-                "id_urgence":        id_urg,
+                "IPP":        id_urg,
                 "nom_complet":       row.get("Nom_Complet", ""),
                 "age":               row.get("Age", 0),
                 "sexe":              row.get("Sexe", ""),
@@ -1794,8 +1802,8 @@ class StatutUpdate(BaseModel):
     statut:     str   # "En triage" | "En attente" | "En traitement" | "Sorti"
     lit_numero: str = ""   # ex: "A-12", "B-03"
 
-@app.patch("/api/patients/{id_urgence}/statut")
-def update_statut(id_urgence: str, body: StatutUpdate, creds: HTTPAuthorizationCredentials = Depends(security)):
+@app.patch("/api/patients/{IPP}/statut")
+def update_statut(IPP: str, body: StatutUpdate, creds: HTTPAuthorizationCredentials = Depends(security)):
     """Met à jour le statut et/ou le lit d'un patient en temps réel."""
     STATUTS_VALIDES = ["En triage", "En attente", "En traitement", "Sorti"]
     if body.statut not in STATUTS_VALIDES:
@@ -1809,7 +1817,7 @@ def update_statut(id_urgence: str, body: StatutUpdate, creds: HTTPAuthorizationC
         with engine.connect() as conn:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS patient_statuts (
-                    id_urgence TEXT PRIMARY KEY,
+                    IPP TEXT PRIMARY KEY,
                     statut     TEXT NOT NULL,
                     lit_numero TEXT DEFAULT '',
                     updated_at TEXT,
@@ -1817,14 +1825,14 @@ def update_statut(id_urgence: str, body: StatutUpdate, creds: HTTPAuthorizationC
                 )
             """))
             conn.execute(text("""
-                INSERT INTO patient_statuts (id_urgence, statut, lit_numero, updated_at, updated_by)
+                INSERT INTO patient_statuts (IPP, statut, lit_numero, updated_at, updated_by)
                 VALUES (:id, :st, :lit, :at, :by)
-                ON CONFLICT(id_urgence) DO UPDATE SET
+                ON CONFLICT(IPP) DO UPDATE SET
                     statut=excluded.statut, lit_numero=excluded.lit_numero,
                     updated_at=excluded.updated_at, updated_by=excluded.updated_by
-            """), {"id": id_urgence, "st": body.statut, "lit": body.lit_numero, "at": now, "by": username})
+            """), {"id": IPP, "st": body.statut, "lit": body.lit_numero, "at": now, "by": username})
             conn.commit()
-        return {"success": True, "id_urgence": id_urgence, "statut": body.statut, "lit_numero": body.lit_numero}
+        return {"success": True, "IPP": IPP, "statut": body.statut, "lit_numero": body.lit_numero}
     except HTTPException:
         raise
     except Exception as e:
@@ -2148,7 +2156,7 @@ def recommander_lits(service: str = "", creds: HTTPAuthorizationCredentials = De
             params: dict = {}
             if service:
                 q += " AND LOWER(service) LIKE :svc"; params["svc"] = f"%{service.lower()}%"
-            q += " GROUP BY etablissement, service HAVING disponibles > 0 ORDER BY disponibles DESC LIMIT 20"
+            q += " GROUP BY etablissement, service HAVING disponibles > 0 ORDER BY disponibles DESC"
             rows = conn.execute(text(q), params).fetchall()
         cols = ["etablissement","service","total","disponibles","taux_occupation"]
         return [dict(zip(cols, r)) for r in rows]

@@ -18,10 +18,10 @@ import ExportButton from '../components/ExportButton';
 import EmailModal from '../components/EmailModal';
 
 const SAISON_COLORS: Record<string,string> = {
-  Hiver:'#3B82F6', Printemps:'#22C55E', 'Eté':'#F59E0B', Automne:'#F97316',
+  Hiver:'#3B82F6', Printemps:'#22C55E', Été:'#F59E0B', Automne:'#F97316',
 };
 const SAISON_ICONS: Record<string,string> = {
-  Hiver:'Hiv.', Printemps:'Pri.', 'Eté':'Été', Automne:'Aut.',
+  Hiver:'Hiver', Printemps:'Printemps', Été:'Été', Automne:'Automne',
 };
 const ALL_ANNEES = ['2019','2020','2021','2022','2023','2024','2025','2026'];
 
@@ -36,7 +36,7 @@ const movingAvg = (data: TSPoint[], window = 14): Array<TSPoint & { ma: number }
 
 const AnalyseTemporelle: React.FC = () => {
   const { dark } = useTheme();
-  const { exportReport, exporting, pdfBase64, pdfFilename } = usePDF('AnalyseTemporelle_CHU.pdf');
+  const { exportReport, exporting, pdfBase64, pdfFilename, pdfError } = usePDF('AnalyseTemporelle_CHU.pdf');
   const [emailOpen, setEmailOpen] = useState(false);
   const [ts,      setTs]      = useState<TSPoint[]>([]);
   const [horaire, setHoraire] = useState<HorairePoint[]>([]);
@@ -177,7 +177,7 @@ const AnalyseTemporelle: React.FC = () => {
         icon={<IconChart size={22} color="white"/>}
         title="Analyse Temporelle"
         subtitle="Évolution et patterns des flux patients"
-        actions={<div style={{display:'flex',gap:8}}><ExportButton label={exporting?'Export...':'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF}/><button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#1a3bdb,#3b82f6)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button></div>}
+        actions={<div style={{display:'flex',gap:8}}><ExportButton label={exporting?'Export...':'Exporter'} csvUrl="/api/export/urgences" onExportPDF={handleExportPDF} onDark/><button onClick={()=>setEmailOpen(true)} style={{padding:'8px 14px',borderRadius:8,border:'1px solid rgba(255,255,255,0.28)',cursor:'pointer',background:'rgba(255,255,255,0.15)',color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:6}}><IconMail size={13} color="white"/> Email</button></div>}
       />
 
       <FilterBar
@@ -218,7 +218,7 @@ const AnalyseTemporelle: React.FC = () => {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, fontWeight:700, color:titleColor }}>
               <IconActivity size={16} color="#3B82F6"/>
-              {view==='serie' ? 'Série temporelle — Patients par jour + Moyenne mobile 14j' : 'Agrégation mensuelle des passages'}
+              {view==='serie' ? 'Évolution quotidienne des passages' : 'Total patients par mois'}
             </div>
             <div style={{ display:'flex', gap:6 }}>
               {(['serie','mensuel'] as const).map(v => (
@@ -288,7 +288,8 @@ const AnalyseTemporelle: React.FC = () => {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>
           {/* Horaire */}
           <div style={{ background:cardBg, borderRadius:12, padding:'20px 24px', boxShadow:cardShadow, border:`1px solid ${cardBorder}` }}>
-            <div style={{ fontWeight:700, marginBottom:12, color:titleColor, fontSize:14 }}>Flux horaire</div>
+            <div style={{ fontWeight:700, marginBottom:2, color:titleColor, fontSize:14 }}>Distribution par heure d'arrivée</div>
+            <div style={{ fontSize:11, color:labelColor, marginBottom:10 }}>Nb moyen de patients par heure</div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={horaire} margin={{ top:4, right:4, left:-28, bottom:0 }}>
                 <XAxis dataKey="heure" tick={{ fontSize:9, fill:tickColor }} axisLine={{ stroke:cardBorder }} tickLine={false} tickFormatter={v=>`${v}h`} interval={3}/>
@@ -303,7 +304,8 @@ const AnalyseTemporelle: React.FC = () => {
 
           {/* Jour semaine */}
           <div style={{ background:cardBg, borderRadius:12, padding:'20px 24px', boxShadow:cardShadow, border:`1px solid ${cardBorder}` }}>
-            <div style={{ fontWeight:700, marginBottom:12, color:titleColor, fontSize:14 }}>Par jour de la semaine</div>
+            <div style={{ fontWeight:700, marginBottom:2, color:titleColor, fontSize:14 }}>Affluence par jour de semaine</div>
+            <div style={{ fontSize:11, color:labelColor, marginBottom:10 }}>Nb moyen de patients par jour</div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={jour} margin={{ top:4, right:4, left:-28, bottom:0 }}>
                 <XAxis dataKey="jour" tick={{ fontSize:9, fill:tickColor }} axisLine={{ stroke:cardBorder }} tickLine={false}/>
@@ -325,7 +327,8 @@ const AnalyseTemporelle: React.FC = () => {
 
           {/* Saison */}
           <div style={{ background:cardBg, borderRadius:12, padding:'20px 24px', boxShadow:cardShadow, border:`1px solid ${cardBorder}` }}>
-            <div style={{ fontWeight:700, marginBottom:12, color:titleColor, fontSize:14 }}>Par saison</div>
+            <div style={{ fontWeight:700, marginBottom:2, color:titleColor, fontSize:14 }}>Répartition saisonnière</div>
+            <div style={{ fontSize:11, color:labelColor, marginBottom:10 }}>Total patients par saison</div>
             <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:12 }}>
               {saison.map(s => {
                 const maxS = Math.max(...saison.map(x=>x.nb_patients));
@@ -357,6 +360,11 @@ const AnalyseTemporelle: React.FC = () => {
       </>}
     </div>
 
+    {pdfError && (
+      <div style={{ margin: '0 0 16px', padding: '10px 16px', borderRadius: 9, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13 }}>
+        Erreur PDF : {pdfError}
+      </div>
+    )}
     <EmailModal open={emailOpen} onClose={()=>setEmailOpen(false)} pdfBase64={pdfBase64} filename={pdfFilename} pageTitle="Analyse Temporelle — CHU Ibn Sina"/>
     </>
   );
