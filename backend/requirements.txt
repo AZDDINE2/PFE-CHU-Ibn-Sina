@@ -11,3 +11,5 @@ cryptography
 openpyxl
 sqlalchemy
 psycopg2-binary
+pymysql
+pyarrow

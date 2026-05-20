@@ -18,7 +18,6 @@ const IconAdmissionForm: React.FC = () => (
 
 const GROUPES_SANG = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 const ANTECEDENTS = ['Aucun','Diabete','Hypertension','Diabete et HTA','Cardiopathie','Asthme','Allergie','Epilepsie','Insuffisance renale','Cancer'];
-const ETABLISSEMENTS = ['Hopital Ibn Sina','CHU Rabat','Hopital Avicenne','Clinique Agdal'];
 const NIVEAUX = ['P1 - Critique','P2 - Urgent','P3 - Semi-urgent','P4 - Non urgent'];
 const MOTIFS = ['AVC','Brulure','Cephalee','Convulsion','Crise asthme','Crise hypertensive','Douleur abdominale','Douleur lombaire','Douleur thoracique','Dyspnee','Fievre elevee','Fracture membre','Infection','Intoxication','Malaise','Plaie ouverte','Traumatisme cranien','Traumatisme oculaire','Urgence obstetricale','Vomissements'];
 const ORIENTATIONS = ['Domicile','Hospitalise','Transfere','Fugue','Decede'];
@@ -30,22 +29,40 @@ const NIVEAU_COLORS: Record<string, string> = {
   'P4 - Non urgent': '#22c55e',
 };
 
+/** Heure locale en format datetime-local (YYYY-MM-DDTHH:MM) */
+const localNow = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
 const initialForm = {
   nom_complet: '', cin: '', age: '', sexe: 'M',
   groupe_sanguin: 'O+', antecedents: 'Aucun',
-  etablissement: 'Hopital Ibn Sina', niveau_triage: 'P3 - Semi-urgent',
+  etablissement: '', niveau_triage: 'P3 - Semi-urgent',
   motif_consultation: 'Malaise', orientation: 'Domicile',
   duree_sejour_min: '60',
-  date_arrivee: new Date().toISOString().slice(0, 16),
+  date_arrivee: localNow(),
   mutuelle: 'Payant', prix_sejour: '0', prix_soins: '0',
 };
 
 const AdmissionPatient: React.FC = () => {
   const { dark } = useTheme();
   const { showToast } = useToast();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(() => ({ ...initialForm, date_arrivee: localNow() }));
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ IPP: string } | null>(null);
+  const [etablissements, setEtablissements] = useState<string[]>([]);
+
+  useEffect(() => {
+    axios.get('/api/etablissements').then(res => {
+      const noms: string[] = (res.data || []).map((e: { nom?: string }) => e.nom).filter(Boolean);
+      if (noms.length > 0) {
+        setEtablissements(noms);
+        setForm(f => ({ ...f, etablissement: f.etablissement || noms[0] }));
+      }
+    }).catch(() => {});
+  }, []); // eslint-disable-line
 
   const {
     cardBg, cardBg2, innerBg, border: themeBorder, textPrimary, textSecondary, textMuted,
@@ -129,7 +146,7 @@ const AdmissionPatient: React.FC = () => {
 
       setResult(res.data);
       showToast({ title: `Patient admis — ${res.data.IPP}`, type: 'success' });
-      setForm({ ...initialForm, date_arrivee: new Date().toISOString().slice(0, 16) });
+      setForm({ ...initialForm, date_arrivee: localNow(), etablissement: form.etablissement });
     } catch {
       showToast({ title: "Erreur lors de l'admission", type: 'error' });
     } finally {
@@ -230,12 +247,21 @@ const AdmissionPatient: React.FC = () => {
           <div style={gridStyle}>
             <div style={fieldStyle}>
               <label style={labelStyle}>Date & heure d'arrivée</label>
-              <input style={inputStyle} type="datetime-local" value={form.date_arrivee} onChange={e => set('date_arrivee', e.target.value)} />
+              <input
+                style={inputStyle}
+                type="datetime-local"
+                value={form.date_arrivee}
+                max={localNow()}
+                onChange={e => set('date_arrivee', e.target.value)}
+              />
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Établissement</label>
               <select style={inputStyle} value={form.etablissement} onChange={e => set('etablissement', e.target.value)}>
-                {ETABLISSEMENTS.map(et => <option key={et}>{et}</option>)}
+                {etablissements.length > 0
+                  ? etablissements.map(et => <option key={et}>{et}</option>)
+                  : <option value="">Chargement...</option>
+                }
               </select>
             </div>
             <div style={fieldStyle}>
@@ -249,10 +275,6 @@ const AdmissionPatient: React.FC = () => {
               <select style={inputStyle} value={form.orientation} onChange={e => set('orientation', e.target.value)}>
                 {ORIENTATIONS.map(o => <option key={o}>{o}</option>)}
               </select>
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Durée séjour (min)</label>
-              <input style={inputStyle} type="number" min={1} value={form.duree_sejour_min} onChange={e => set('duree_sejour_min', e.target.value)} />
             </div>
           </div>
         </div>

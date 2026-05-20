@@ -170,8 +170,8 @@ const PatientsActuels: React.FC = () => {
     color: active ? '#fff' : muted,
   });
 
-  /* Shared patient row renderer */
-  const PatientRow = ({ p, i }: { p: Patient; i: number }) => {
+  /* Render function (NOT a React component) — avoids remount-on-render bug with dropdowns */
+  const renderPatientRow = (p: Patient, i: number) => {
     const rowBg = dark ? (i%2===0?'#1e293b':'#162032') : (i%2===0?'#fff':'#FAFBFC');
     const sc = STATUT_COLORS[p.statut] || STATUT_COLORS['En triage'];
     const triageLevel = p.niveau_triage?.slice(0,2) || 'P3';
@@ -222,7 +222,7 @@ const PatientsActuels: React.FC = () => {
     );
   };
 
-  const TableHeader = () => (
+  const renderTableHeader = () => (
     <thead>
       <tr style={{ background: headerBg, borderBottom: `2px solid ${border}` }}>
         {['Heure','Patient','CIN','Âge/Sexe','Triage','Motif','Lit','Statut','Action'].map(h => (
@@ -364,9 +364,9 @@ const PatientsActuels: React.FC = () => {
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                        <TableHeader />
+                        {renderTableHeader()}
                         <tbody>
-                          {etabPatients.map((p, i) => <PatientRow key={p.IPP} p={p} i={i} />)}
+                          {etabPatients.map((p, i) => renderPatientRow(p, i))}
                         </tbody>
                       </table>
                     </div>
@@ -395,9 +395,9 @@ const PatientsActuels: React.FC = () => {
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <TableHeader />
+                {renderTableHeader()}
                 <tbody>
-                  {tableFiltered.map((p, i) => <PatientRow key={p.IPP} p={p} i={i} />)}
+                  {tableFiltered.map((p, i) => renderPatientRow(p, i))}
                 </tbody>
               </table>
             </div>
