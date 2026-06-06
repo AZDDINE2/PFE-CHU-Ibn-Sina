@@ -125,8 +125,9 @@ def send_email(payload: EmailInput):
         )
 
     try:
+        from email.utils import formataddr
         msg            = MIMEMultipart()
-        msg["From"]    = smtp_user
+        msg["From"]    = formataddr(("CHU Ibn Sina — Urgences", smtp_user))
         msg["To"]      = payload.to
         msg["Subject"] = payload.subject
         msg.attach(MIMEText(payload.body, "plain", "utf-8"))

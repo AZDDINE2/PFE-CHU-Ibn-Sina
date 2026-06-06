@@ -1,0 +1,117 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{Remerciements}{1}{chapter*.1}%
+\contentsline {chapter}{Dédicace}{2}{chapter*.2}%
+\contentsline {chapter}{Résumé}{3}{chapter*.3}%
+\contentsline {chapter}{Liste des abréviations}{12}{chapter*.4}%
+\contentsline {chapter}{Introduction Générale}{14}{chapter*.5}%
+\contentsline {chapter}{\numberline {1}Contexte général du stage}{16}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introduction}{16}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Présentation de l'organisme d'accueil}{16}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Présentation générale du CHU Ibn Sina}{16}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Les établissements du réseau}{17}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}Les missions du CHUIS}{17}{subsection.1.2.3}%
+\contentsline {subsection}{\numberline {1.2.4}Contexte numérique et enjeux informatiques}{18}{subsection.1.2.4}%
+\contentsline {section}{\numberline {1.3}Analyse des besoins du projet}{18}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}Besoins fonctionnels}{18}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}Besoins non fonctionnels}{19}{subsection.1.3.2}%
+\contentsline {section}{\numberline {1.4}Présentation du projet}{19}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Objectifs}{19}{subsection.1.4.1}%
+\contentsline {subsection}{\numberline {1.4.2}Livrables}{19}{subsection.1.4.2}%
+\contentsline {section}{\numberline {1.5}Outils et technologies utilisés}{20}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Méthodologie du projet}{21}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}Diagramme de Gantt}{21}{subsection.1.6.1}%
+\contentsline {subsection}{\numberline {1.6.2}Architecture globale de la solution}{21}{subsection.1.6.2}%
+\contentsline {section}{\numberline {1.7}Contraintes et difficultés rencontrées}{22}{section.1.7}%
+\contentsline {section}{\numberline {1.8}État de l'art et solutions existantes}{23}{section.1.8}%
+\contentsline {subsection}{\numberline {1.8.1}Systèmes de Business Intelligence dans le domaine hospitalier}{23}{subsection.1.8.1}%
+\contentsline {subsection}{\numberline {1.8.2}Limites des solutions génériques}{24}{subsection.1.8.2}%
+\contentsline {section}{\numberline {1.9}Conclusion}{24}{section.1.9}%
+\contentsline {chapter}{\numberline {2}Pipeline ETL : Bronze $\rightarrow $ Silver $\rightarrow $ Gold}{25}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Introduction}{25}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Objectif du processus ETL}{26}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Présentation de la source de données}{26}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Architecture du pipeline}{27}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Les étapes du processus ETL}{28}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Étape 1 -- Extraction : Couche Bronze}{28}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Étape 2 -- Transformation : Couche Silver}{29}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.3}Étape 3 -- Enrichissement : Couche Gold}{31}{subsection.2.5.3}%
+\contentsline {section}{\numberline {2.6}Automatisation et déclenchement}{32}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Résultats quantitatifs du pipeline}{33}{section.2.7}%
+\contentsline {section}{\numberline {2.8}Conclusion}{33}{section.2.8}%
+\contentsline {chapter}{\numberline {3}Analyse Exploratoire des Données et KPIs}{34}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Introduction}{34}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Sources des données}{35}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Statistiques descriptives}{35}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Vue d'ensemble du jeu de données urgences}{35}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Distribution par niveau de triage}{36}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Distribution par orientation}{36}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Analyse temporelle des flux}{36}{subsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.3.5}Top 10 des motifs de consultation}{37}{subsection.3.3.5}%
+\contentsline {section}{\numberline {3.4}Structure du modèle de données Gold}{37}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Définition des KPIs}{38}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}KPIs globaux du dashboard}{38}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}KPIs temps réel (Patients Actuels)}{39}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}KPIs d'alerte configurables}{39}{subsection.3.5.3}%
+\contentsline {section}{\numberline {3.6}Conclusion}{39}{section.3.6}%
+\contentsline {chapter}{\numberline {4}Modèles de Machine Learning}{40}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Introduction}{40}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Objectifs des modèles ML}{40}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Feature Engineering}{41}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Features pour XGBoost et Random Forest}{41}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Encodage des variables catégorielles}{41}{subsection.4.3.2}%
+\contentsline {section}{\numberline {4.4}Modèle XGBoost -- Prédiction du flux quotidien}{42}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Principe}{42}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Hyperparamètres}{42}{subsection.4.4.2}%
+\contentsline {section}{\numberline {4.5}Modèle Random Forest -- Prédiction de l'orientation}{43}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Principe}{43}{subsection.4.5.1}%
+\contentsline {section}{\numberline {4.6}Modèle Prophet -- Prévision des séries temporelles}{44}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Évaluation des modèles}{44}{section.4.7}%
+\contentsline {subsection}{\numberline {4.7.1}Métriques de performance}{44}{subsection.4.7.1}%
+\contentsline {section}{\numberline {4.8}Intégration dans le dashboard}{45}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Conclusion}{46}{section.4.9}%
+\contentsline {chapter}{\numberline {5}Visualisation \& Tableau de Bord}{47}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Introduction}{47}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Architecture frontend}{47}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Organisation du code React}{47}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Choix des technologies de visualisation}{48}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Contrôle d'accès -- RBAC}{48}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Présentation des pages du dashboard}{48}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Page 1 -- Authentification}{48}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Page 2 -- KPIs Globaux}{49}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Page 3 -- Analyse Temporelle}{50}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}Page 4 -- Prédictions IA}{50}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}Page 5 -- Ressources Humaines}{53}{subsection.5.3.5}%
+\contentsline {subsection}{\numberline {5.3.6}Page 6 -- Soins Médicaux}{54}{subsection.5.3.6}%
+\contentsline {subsection}{\numberline {5.3.7}Page 7 -- Patients Actuels}{54}{subsection.5.3.7}%
+\contentsline {subsection}{\numberline {5.3.8}Page 8 -- Admission Patient}{55}{subsection.5.3.8}%
+\contentsline {subsection}{\numberline {5.3.9}Page 9 -- Gestion des Lits}{56}{subsection.5.3.9}%
+\contentsline {subsection}{\numberline {5.3.10}Page 10 -- Gestion du Personnel}{57}{subsection.5.3.10}%
+\contentsline {subsection}{\numberline {5.3.11}Pages 11 à 15}{58}{subsection.5.3.11}%
+\contentsline {section}{\numberline {5.4}Architecture de l'application}{59}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Conclusion}{60}{section.5.5}%
+\contentsline {chapter}{\numberline {6}Sécurité, Performance et Déploiement}{61}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Introduction}{61}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Sécurité de l'application}{61}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Authentification par JSON Web Token (JWT)}{61}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Hachage des mots de passe}{62}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Contrôle d'accès basé sur les rôles (RBAC)}{63}{subsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.2.4}Filtrage par établissement}{63}{subsection.6.2.4}%
+\contentsline {section}{\numberline {6.3}Performance et optimisation}{64}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Cache Parquet}{64}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Stratégie de mise en cache}{64}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Temps de réponse des API}{64}{subsection.6.3.3}%
+\contentsline {section}{\numberline {6.4}Déploiement Docker}{65}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}Configuration Docker Compose}{65}{subsection.6.4.1}%
+\contentsline {subsection}{\numberline {6.4.2}Commandes de déploiement}{65}{subsection.6.4.2}%
+\contentsline {subsection}{\numberline {6.4.3}URLs d'accès}{66}{subsection.6.4.3}%
+\contentsline {section}{\numberline {6.5}Tests et validation}{66}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}Stratégie de test}{66}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}Scénarios de test critiques}{67}{subsection.6.5.2}%
+\contentsline {subsection}{\numberline {6.5.3}Validation avec les utilisateurs finaux}{68}{subsection.6.5.3}%
+\contentsline {section}{\numberline {6.6}Conclusion}{68}{section.6.6}%
+\contentsline {chapter}{Conclusion Générale}{69}{chapter*.52}%
+\contentsline {chapter}{Bibliographie}{71}{chapter*.53}%
+\contentsline {chapter}{\numberline {A}Annexes}{72}{chapter.A}%
+\contentsline {section}{\numberline {A.1}Structure complète du projet}{72}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Endpoints API complets}{73}{section.A.2}%
+\contentsline {section}{\numberline {A.3}Galerie des captures d'écran}{76}{section.A.3}%

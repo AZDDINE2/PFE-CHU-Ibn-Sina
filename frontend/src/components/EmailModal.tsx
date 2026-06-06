@@ -58,9 +58,9 @@ const EmailModal: React.FC<Props> = ({
     setSending(true);
     try {
       await axios.post('/api/email/send', {
-        to: to.trim(),
-        subject: `Rapport CHU Ibn Sina — ${pageTitle || 'Dashboard Urgences'}`,
-        body: `Bonjour,\n\nVeuillez trouver ci-joint le rapport "${pageTitle || 'Dashboard Urgences'}" généré automatiquement depuis le Dashboard CHU Ibn Sina.\n\nCordialement,\nDashboard Gestion des Urgences — CHU Ibn Sina Rabat`,
+        to:         to.trim(),
+        subject:    `Rapport CHU Ibn Sina — ${pageTitle || 'Dashboard Urgences'}`,
+        body:       `Bonjour,\n\nVeuillez trouver ci-joint le rapport "${pageTitle || 'Dashboard Urgences'}" généré automatiquement depuis le Tableau de Bord des Urgences du CHU Ibn Sina de Rabat.\n\nCe document est confidentiel et destiné uniquement à son destinataire.\n\nCordialement,\nService Informatique — CHU Ibn Sina Rabat`,
         pdf_base64: pdfBase64,
         filename,
       });
@@ -119,7 +119,6 @@ const EmailModal: React.FC<Props> = ({
               type="email"
               value={to}
               onChange={e => setTo(e.target.value)}
-              onBlur={() => setTouched(true)}
               placeholder="directeur@chuis.ma"
               disabled={sending}
               style={{
@@ -141,11 +140,22 @@ const EmailModal: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Aperçu sujet */}
-          <div style={{ padding: '10px 12px', borderRadius: 8, background: dark ? '#0f172a' : '#f8fafc', border: `1px solid ${border}` }}>
-            <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>Sujet de l'email</div>
-            <div style={{ fontSize: 12, color: text, fontWeight: 600 }}>
-              Rapport CHU Ibn Sina — {pageTitle || 'Dashboard Urgences'}
+          {/* Aperçu expéditeur + sujet */}
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: dark ? '#0f172a' : '#f8fafc', border: `1px solid ${border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 11, color: muted, marginBottom: 2 }}>Expéditeur</div>
+              <div style={{ fontSize: 12, color: text, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg,#1a3170,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                CHU Ibn Sina — Urgences
+              </div>
+            </div>
+            <div style={{ borderTop: `1px solid ${border}`, paddingTop: 8 }}>
+              <div style={{ fontSize: 11, color: muted, marginBottom: 2 }}>Sujet</div>
+              <div style={{ fontSize: 12, color: text, fontWeight: 600 }}>
+                Rapport CHU Ibn Sina — {pageTitle || 'Dashboard Urgences'}
+              </div>
             </div>
           </div>
 

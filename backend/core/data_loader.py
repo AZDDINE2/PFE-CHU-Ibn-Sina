@@ -66,9 +66,11 @@ def _read_table(table: str) -> pd.DataFrame:
 
 
 def _do_load_data():
-    """Logique complète de chargement."""
+    """Logique complète de chargement. Chaque étape est isolée : une erreur DB
+    n'empêche jamais le chargement depuis le cache Parquet."""
+
+    # ── ÉTAPE 1 : Init tables DB (non bloquant) ──────────────────────────
     try:
-        # ── Init tables auxiliaires ──────────────────────────────────────
         if IS_SQLITE:
             db_path = DATABASE_URL.replace("sqlite:////", "/").replace("sqlite:///", "")
             _c = sqlite3.connect(db_path, timeout=30)
@@ -83,10 +85,6 @@ def _do_load_data():
                     id_soin INTEGER PRIMARY KEY AUTOINCREMENT,
                     type_soin TEXT, cout FLOAT
                 );
-                CREATE TABLE IF NOT EXISTS etablissements_bronze (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nom TEXT, type_etab TEXT, ville TEXT
-                );
             """)
             _c.commit()
             _c.close()
@@ -98,12 +96,12 @@ def _do_load_data():
                         etablissement TEXT, orientation TEXT, niveau_triage TEXT
                     )
                 """))
-        elif engine:
-            with engine.begin() as conn:
-                conn.execute(text("CREATE TABLE IF NOT EXISTS urgences_bronze (id BIGSERIAL PRIMARY KEY, etablissement TEXT)"))
         print("Tables initialisées.")
+    except Exception as e:
+        print(f"Init tables (non bloquant) : {e}")
 
-        # ── Charger en mémoire (cache Parquet en priorité) ──────────────
+    # ── ÉTAPE 2 : Charger urgences (cache en priorité, DB en secours) ────
+    try:
         cache_urg = _load_cache(CACHE_URG)
         if not cache_urg.empty:
             db_n = _db_count("urgences", "Annee IS NOT NULL")
@@ -117,66 +115,76 @@ def _do_load_data():
                 data["urg"] = cache_urg
                 print(f"Urgences depuis cache : {len(cache_urg):,} lignes (démarrage rapide)")
         else:
-            print("Pas de cache — chargement initial depuis la base...")
+            print("Pas de cache — chargement depuis la base...")
             reload_urg()
+    except Exception as e:
+        print(f"Erreur chargement urgences : {e}")
+        data.setdefault("urg", pd.DataFrame())
 
-        if engine:
-            try:
-                cache_soins = _load_cache(CACHE_SOINS)
-                if not cache_soins.empty:
-                    db_s = _db_count("soins", "")
-                    if db_s > 0 and db_s > len(cache_soins):
-                        data["soins"] = _read_table("soins")
-                        _save_cache(data["soins"], CACHE_SOINS)
-                        print(f"Soins rechargés : {len(data['soins']):,} lignes")
-                    else:
-                        data["soins"] = cache_soins
-                        print(f"Soins depuis cache : {len(cache_soins):,} lignes (démarrage rapide)")
-                else:
-                    data["soins"] = _read_table("soins")
-                    _save_cache(data["soins"], CACHE_SOINS)
-                    print(f"Soins chargés : {len(data['soins']):,} lignes")
-            except Exception:
-                data["soins"] = pd.DataFrame()
-            try:
-                data["etab"] = _read_table("etablissements")
-            except Exception:
-                data["etab"] = pd.DataFrame()
+    # ── ÉTAPE 3 : Charger soins (cache en priorité) ──────────────────────
+    try:
+        cache_soins = _load_cache(CACHE_SOINS)
+        if not cache_soins.empty:
+            db_s = _db_count("soins", "")
+            if db_s > 0 and db_s > len(cache_soins):
+                data["soins"] = _read_table("soins")
+                _save_cache(data["soins"], CACHE_SOINS)
+                print(f"Soins rechargés : {len(data['soins']):,} lignes")
+            else:
+                data["soins"] = cache_soins
+                print(f"Soins depuis cache : {len(cache_soins):,} lignes (démarrage rapide)")
+        elif engine:
+            data["soins"] = _read_table("soins")
+            _save_cache(data["soins"], CACHE_SOINS)
+            print(f"Soins chargés : {len(data['soins']):,} lignes")
         else:
             data["soins"] = pd.DataFrame()
-            data["etab"]  = pd.DataFrame()
+    except Exception as e:
+        print(f"Erreur chargement soins : {e}")
+        data.setdefault("soins", pd.DataFrame())
 
-        # Fichiers optionnels (prédictions / séries temporelles / métriques)
-        for key, path in [
-            ("ts",      os.path.join(GOLD,   "serie_temporelle_daily.csv")),
-            ("pred30",  os.path.join(GOLD,   "predictions_30jours.csv")),
-            ("metrics", os.path.join(MODELS, "metrics_comparison.csv")),
-        ]:
-            try:
-                data[key] = pd.read_csv(path, encoding="utf-8-sig")
-            except Exception:
-                data[key] = pd.DataFrame()
+    # ── ÉTAPE 4 : Charger établissements ─────────────────────────────────
+    try:
+        data["etab"] = _read_table("etablissements")
+    except Exception:
+        data.setdefault("etab", pd.DataFrame())
 
-        # Modèles ML optionnels
-        for key, path in [
-            ("xgb", os.path.join(MODELS, "xgboost_model.pkl")),
-            ("rf",  os.path.join(MODELS, "random_forest_model.pkl")),
-            ("le",  os.path.join(MODELS, "label_encoder.pkl")),
-        ]:
-            try:
-                data[key] = joblib.load(path)
-            except Exception:
-                data[key] = None
+    # ── ÉTAPE 5 : Fichiers CSV optionnels ────────────────────────────────
+    for key, path in [
+        ("ts",      os.path.join(GOLD,   "serie_temporelle_daily.csv")),
+        ("pred30",  os.path.join(GOLD,   "predictions_30jours.csv")),
+        ("metrics", os.path.join(MODELS, "metrics_comparison.csv")),
+    ]:
+        try:
+            data[key] = pd.read_csv(path, encoding="utf-8-sig")
+        except Exception:
+            data[key] = pd.DataFrame()
 
-        # Initialiser les tables temps réel
+    # ── ÉTAPE 6 : Modèles ML ─────────────────────────────────────────────
+    for key, path in [
+        ("xgb", os.path.join(MODELS, "xgboost_model.pkl")),
+        ("rf",  os.path.join(MODELS, "random_forest_model.pkl")),
+        ("le",  os.path.join(MODELS, "label_encoder.pkl")),
+    ]:
+        try:
+            data[key] = joblib.load(path)
+        except Exception:
+            data[key] = None
+
+    # ── ÉTAPE 7 : Tables temps réel (non bloquant) ───────────────────────
+    try:
         from core.auth import _init_users_table
         _init_users_table()
+    except Exception as e:
+        print(f"Init users (non bloquant) : {e}")
+
+    try:
         if engine:
             with engine.connect() as conn:
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS patient_statuts (
                         IPP VARCHAR(50) PRIMARY KEY,
-                        statut     TEXT NOT NULL,
+                        statut TEXT NOT NULL,
                         lit_numero TEXT DEFAULT '',
                         updated_at TEXT,
                         updated_by TEXT
@@ -185,12 +193,13 @@ def _do_load_data():
                 try:
                     conn.execute(text("ALTER TABLE patient_statuts ADD COLUMN lit_numero TEXT DEFAULT ''"))
                 except Exception:
-                    pass  # colonne déjà présente
+                    pass
                 conn.commit()
-
-        print("Données et modèles chargés avec succès")
     except Exception as e:
-        print(f"ERREUR chargement : {e}")
+        print(f"Init patient_statuts (non bloquant) : {e}")
+
+    urg_n = len(data.get("urg", pd.DataFrame()))
+    print(f"Chargement terminé — urgences: {urg_n:,} lignes")
 
 
 def _load_data_background():

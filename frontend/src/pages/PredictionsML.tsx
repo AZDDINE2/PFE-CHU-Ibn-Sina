@@ -124,7 +124,7 @@ const JOURS   = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanch
 const SAISONS = ['Hiver','Printemps','Été','Automne'];
 const ANTECEDENTS = ['Aucun','Cardiaque','Diabète','Respiratoire','Neurologique','Cancer','HTA'];
 
-type Tab = 'prevision' | 'saison' | 'patient' | 'lits' | 'planif' | 'modeles';
+type Tab = 'prevision' | 'saison' | 'lits' | 'planif' | 'modeles' | 'rf';
 
 interface MaladieSaison { motif: string; count: number; pct: number; p1_rate: number; hospit_rate: number; avg_duree: number; }
 interface SaisonData    { saison: string; total_patients: number; maladies: MaladieSaison[]; }
@@ -133,7 +133,7 @@ interface SaisonData    { saison: string; total_patients: number; maladies: Mala
 
 const PredictionsML: React.FC = () => {
   const { dark } = useTheme();
-  const [tab, setTab] = useState<Tab>('prevision');
+  const [tab, setTab] = useState<Tab>('modeles');
   // inject spin keyframe once
   React.useEffect(() => {
     if (!document.getElementById('spin-kf')) {
@@ -154,12 +154,12 @@ const PredictionsML: React.FC = () => {
   const muted   = textMuted;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode; desc: string }[] = [
+    { id: 'modeles',   label: 'Modèles & Performance',  icon: <IconCpu />,      desc: 'Résultats R², MAE et RMSE de chaque modèle de machine learning' },
+    { id: 'rf',        label: 'Prédiction Orientation',  icon: <IconUser />,     desc: 'Prédit l\'orientation (Hospitalisé / Domicile / Fugue...) basée sur 530k cas historiques' },
     { id: 'prevision', label: 'Prévision Affluence',    icon: <IconChart />,    desc: 'Combien de patients dans les 30 prochains jours ?' },
     { id: 'saison',    label: 'Prévision Saisonnière',  icon: <IconAlert />,    desc: 'Quelles pathologies l\'urgence va-t-elle recevoir selon la saison ?' },
     { id: 'planif',    label: 'Planification Date',     icon: <IconCalendar/>,  desc: 'Patients prévus, ressources humaines et lits nécessaires pour une date donnée' },
-    { id: 'patient',   label: 'Évaluation Patient',     icon: <IconUser />,     desc: 'Prédire le niveau de triage et la durée de séjour' },
     { id: 'lits',      label: 'Orientation Lits',       icon: <IconBed />,      desc: 'Trouver un lit disponible selon le profil patient' },
-    { id: 'modeles',   label: 'Modèles & Performance',  icon: <IconCpu />,      desc: 'Résultats R², MAE et RMSE de chaque modèle de machine learning' },
   ];
 
   const activeTab = TABS.find(t => t.id === tab)!;
@@ -275,9 +275,9 @@ const PredictionsML: React.FC = () => {
       {tab === 'prevision' && <TabPrevision dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'saison'    && <TabSaison    dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'planif'    && <TabPlanif    dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
-      {tab === 'patient'   && <TabPatient   dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'lits'      && <TabLits      dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
       {tab === 'modeles'   && <TabModeles   dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
+      {tab === 'rf'        && <TabRF        dark={dark} cardBg={cardBg} border={border} text={text} muted={muted} innerBg={innerBg} />}
     </div>
   );
 };
@@ -1720,6 +1720,246 @@ const TabModeles: React.FC<{ dark: boolean; cardBg: string; border: string; text
         </div>
       </div>
 
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// TAB ORIENTATION — Prédiction d'orientation patient
+// ══════════════════════════════════════════════════════════════
+
+// Icônes SVG professionnelles pour l'orientation
+const IcoHospital = ({ color = '#3b82f6', size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    <line x1="12" y1="5" x2="12" y2="11"/><line x1="9" y1="8" x2="15" y2="8"/>
+  </svg>
+);
+const IcoDomicile = ({ color = '#22c55e', size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+);
+const IcoTransfert = ({ color = '#f59e0b', size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>
+    <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    <line x1="8" y1="7" x2="8" y2="13"/><line x1="5" y1="10" x2="11" y2="10"/>
+  </svg>
+);
+const IcoFugue = ({ color = '#ef4444', size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 4h3a2 2 0 012 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/>
+    <path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 01-1.391.93L6.5 19.5a1 1 0 01-.609-.92V4.562a2 2 0 011.2-1.833l4-1.667a1 1 0 011.409.915z"/>
+  </svg>
+);
+const IcoDeces = ({ color = '#64748b', size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+);
+const IcoOrientation = ({ color = '#2563eb', size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+  </svg>
+);
+const IcoEmptyState = ({ color = '#94a3b8', size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+    <line x1="12" y1="5" x2="12" y2="11"/><line x1="9" y1="8" x2="15" y2="8"/>
+  </svg>
+);
+
+const getOrientationIcon = (orientation: string, color: string, size = 28) => {
+  if (orientation.includes('Hospit'))   return <IcoHospital  color={color} size={size} />;
+  if (orientation.includes('Fugue'))    return <IcoFugue     color={color} size={size} />;
+  if (orientation.includes('Transfert') || orientation.includes('Transf')) return <IcoTransfert color={color} size={size} />;
+  if (orientation.includes('Décès'))    return <IcoDeces     color={color} size={size} />;
+  return <IcoDomicile color={color} size={size} />;
+};
+const NIVEAUX_TRIAGE  = ['P1 - Critique','P2 - Urgent','P3 - Semi-urgent','P4 - Non urgent'];
+const GROUPES_AGE_ORI = ['Enfant','Adulte jeune','Adulte','Senior'];
+const ANTECEDENTS_ORI = ['Aucun','Diabete','Hypertension','Cardiopathie','Asthme','Epilepsie','Cancer','Insuffisance renale'];
+const MOTIFS_ORI      = ['AVC','Brulure','Cephalee','Convulsion','Crise asthme','Crise hypertensive',
+  'Douleur abdominale','Douleur lombaire','Douleur thoracique','Dyspnee','Fievre elevee',
+  'Fracture membre','Infection','Intoxication','Malaise','Plaie ouverte','Traumatisme cranien'];
+const SAISONS_ORI     = ['Hiver','Printemps','Ete','Automne'];
+
+interface OrientResult {
+  prediction:    string;
+  proba:         number;
+  couleur:       string;
+  orientations:  { orientation: string; proba: number; couleur: string }[];
+  duree_mediane: { minutes: number; affichage: string };
+  nb_cas_similaires: number;
+  confiance:     string;
+  confiance_color: string;
+  profil:        { age: number; sexe: string; triage: string; motif: string; groupe_age: string };
+}
+
+const TabRF: React.FC<{ dark: boolean; cardBg: string; border: string; text: string; muted: string; innerBg: string }> = ({
+  dark, cardBg, border, text, muted, innerBg
+}) => {
+  const [form, setForm] = React.useState({
+    age: 35, sexe: 'M', groupe_age: 'Adulte',
+    antecedents: 'Aucun', niveau_triage: 'P3 - Semi-urgent',
+    motif: 'Malaise', mutuelle: 'RAMED',
+    heure: new Date().getHours(), saison: 'Printemps',
+  });
+  const [result, setResult] = React.useState<OrientResult | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
+
+  const predict = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const r = await axios.post('/api/predict/orientation', form, { headers: { Authorization: `Bearer ${token}` } });
+      setResult(r.data);
+    } catch { alert('Erreur de prédiction'); }
+    setLoading(false);
+  };
+
+  const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: innerBg, color: text, fontSize: 13 };
+  const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: muted, marginBottom: 4, display: 'block', textTransform: 'uppercase' };
+
+  return (
+    <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+
+      {/* ── Formulaire ── */}
+      <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, padding: 24, flex: '0 0 310px' }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: text, marginBottom: 16 }}>Profil Patient</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div><span style={lbl}>Âge</span>
+            <input type="number" min={0} max={120} value={form.age} onChange={e => set('age', +e.target.value)} style={inp} />
+          </div>
+          <div><span style={lbl}>Sexe</span>
+            <select value={form.sexe} onChange={e => set('sexe', e.target.value)} style={inp}>
+              <option value="M">Masculin</option><option value="F">Féminin</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 10 }}><span style={lbl}>Groupe d'âge</span>
+          <select value={form.groupe_age} onChange={e => set('groupe_age', e.target.value)} style={inp}>
+            {GROUPES_AGE_ORI.map(g => <option key={g}>{g}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 10 }}><span style={lbl}>Niveau de triage</span>
+          <select value={form.niveau_triage} onChange={e => set('niveau_triage', e.target.value)} style={inp}>
+            {NIVEAUX_TRIAGE.map(n => <option key={n}>{n}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 10 }}><span style={lbl}>Motif de consultation</span>
+          <select value={form.motif} onChange={e => set('motif', e.target.value)} style={inp}>
+            {MOTIFS_ORI.map(m => <option key={m}>{m}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 10 }}><span style={lbl}>Antécédents</span>
+          <select value={form.antecedents} onChange={e => set('antecedents', e.target.value)} style={inp}>
+            {ANTECEDENTS_ORI.map(a => <option key={a}>{a}</option>)}
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div><span style={lbl}>Mutuelle</span>
+            <select value={form.mutuelle} onChange={e => set('mutuelle', e.target.value)} style={inp}>
+              {['Payant','AMO','RAMED','Assurance'].map(m => <option key={m}>{m}</option>)}
+            </select>
+          </div>
+          <div><span style={lbl}>Saison</span>
+            <select value={form.saison} onChange={e => set('saison', e.target.value)} style={inp}>
+              {SAISONS_ORI.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <button onClick={predict} disabled={loading} style={{
+          width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
+          background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff',
+          fontWeight: 700, fontSize: 14, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            {loading ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M21 12a9 9 0 11-6.219-8.56" style={{ animation: 'spin 1s linear infinite', transformOrigin: 'center' }}/>
+              </svg>
+            ) : (
+              <IcoOrientation color="white" size={16} />
+            )}
+            {loading ? 'Analyse en cours…' : 'Prédire l\'orientation'}
+          </span>
+        </button>
+      </div>
+
+      {/* ── Résultats ── */}
+      <div style={{ flex: 1, minWidth: 300 }}>
+        {!result ? (
+          <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, padding: 48, textAlign: 'center' }}>
+            <div style={{ marginBottom: 16 }}><IcoEmptyState color="#94a3b8" size={52} /></div>
+            <div style={{ color: muted, fontSize: 14 }}>Renseignez le profil patient et lancez la prédiction</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Résultat principal */}
+            <div style={{ background: cardBg, borderRadius: 12, border: `2px solid ${result.couleur}`, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{ width: 64, height: 64, borderRadius: 14, background: `${result.couleur}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
+                {getOrientationIcon(result.prediction, result.couleur, 30)}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Orientation la plus probable</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: result.couleur }}>{result.prediction}</div>
+                <div style={{ fontSize: 13, color: muted, marginTop: 2 }}>{result.proba}% des cas similaires</div>
+              </div>
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: muted }}>Durée médiane</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: text }}>{result.duree_mediane.affichage}</div>
+                <div style={{ fontSize: 11, color: result.confiance_color, fontWeight: 700 }}>Confiance : {result.confiance}</div>
+                <div style={{ fontSize: 10, color: muted }}>{result.nb_cas_similaires.toLocaleString()} cas similaires</div>
+              </div>
+            </div>
+
+            {/* Distribution complète */}
+            <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: text, marginBottom: 14 }}>Distribution des orientations — cas similaires</div>
+              {result.orientations.map(o => (
+                <div key={o.orientation} style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, color: text, fontWeight: 600 }}>{o.orientation}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: o.couleur }}>{o.proba}%</span>
+                  </div>
+                  <div style={{ height: 8, background: dark ? '#1e293b' : '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${o.proba}%`, background: o.couleur, borderRadius: 4, transition: 'width 0.6s ease' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Récap profil */}
+            <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${border}`, padding: '12px 16px' }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {[
+                  { l: 'Patient', v: `${result.profil.age} ans · ${result.profil.sexe === 'M' ? 'H' : 'F'} · ${result.profil.groupe_age}` },
+                  { l: 'Triage', v: result.profil.triage },
+                  { l: 'Motif', v: result.profil.motif },
+                ].map(r => (
+                  <div key={r.l}>
+                    <span style={{ fontSize: 10, color: muted, fontWeight: 700, textTransform: 'uppercase' }}>{r.l} </span>
+                    <span style={{ fontSize: 12, color: text, fontWeight: 600 }}>{r.v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

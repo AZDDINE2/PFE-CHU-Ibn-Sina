@@ -431,3 +431,121 @@ def get_anomalies(creds: HTTPAuthorizationCredentials = Depends(security)):
         return result
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ══════════════════════════════════════════════════════════════
+# PRÉDICTION ORIENTATION — Basée sur statistiques historiques
+# ══════════════════════════════════════════════════════════════
+
+class OrientationInput(BaseModel):
+    age:           int
+    sexe:          str
+    groupe_age:    str
+    antecedents:   str
+    niveau_triage: str
+    motif:         str
+    mutuelle:      str
+    heure:         int  = 12
+    saison:        str  = "Printemps"
+
+
+@router.post("/api/predict/orientation")
+def predict_orientation(body: OrientationInput, creds: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Prédit l'orientation en cherchant les cas historiques similaires
+    et calcule la distribution réelle des orientations pour ce profil.
+    Approche : statistiques conditionnelles sur 530k patients réels.
+    """
+    try:
+        urg = get_urg().copy()
+        if urg.empty:
+            raise HTTPException(503, "Données non disponibles")
+
+        COULEURS = {
+            "Hospitalisation":       "#3b82f6",
+            "Retour domicile":       "#22c55e",
+            "Domicile":              "#22c55e",
+            "Consultation externe":  "#8b5cf6",
+            "Fugue":                 "#ef4444",
+            "Transfert":             "#f59e0b",
+            "Décès":                 "#64748b",
+        }
+
+        # ── Étape 1 : filtre strict (triage + motif + groupe_age) ────────
+        code = body.niveau_triage[:2] if body.niveau_triage else "P3"
+        mask = (
+            urg["Niveau_Triage"].str.startswith(code, na=False) &
+            (urg["Motif_Consultation"] == body.motif) &
+            (urg["Groupe_Age"] == body.groupe_age)
+        )
+        subset = urg[mask]
+
+        # ── Étape 2 : fallback si trop peu de cas (triage + motif) ──────
+        if len(subset) < 50:
+            mask2  = (
+                urg["Niveau_Triage"].str.startswith(code, na=False) &
+                (urg["Motif_Consultation"] == body.motif)
+            )
+            subset = urg[mask2]
+
+        # ── Étape 3 : fallback final (triage seul) ───────────────────────
+        if len(subset) < 30:
+            subset = urg[urg["Niveau_Triage"].str.startswith(code, na=False)]
+
+        n_cas = len(subset)
+
+        # ── Distribution des orientations ────────────────────────────────
+        dist = (
+            subset["Orientation"]
+            .value_counts(normalize=True)
+            .mul(100)
+            .round(1)
+            .to_dict()
+        )
+
+        # Construire la liste triée
+        orientations = sorted(
+            [{"orientation": k, "proba": v, "couleur": COULEURS.get(k, "#94a3b8")}
+             for k, v in dist.items()],
+            key=lambda x: x["proba"], reverse=True
+        )
+
+        prediction_principale = orientations[0] if orientations else {"orientation": "Inconnu", "proba": 0}
+
+        # ── Durée médiane pour ce profil ─────────────────────────────────
+        duree_med = float(subset["Duree_Sejour_min"].median()) if n_cas > 0 else 180.0
+        h, m      = int(duree_med // 60), int(duree_med % 60)
+        duree_str = f"{h}h {m:02d}min" if h > 0 else f"{m}min"
+
+        # ── Niveau de confiance selon nb de cas ──────────────────────────
+        if n_cas >= 500:
+            confiance = "Élevée"
+            confiance_color = "#22c55e"
+        elif n_cas >= 100:
+            confiance = "Moyenne"
+            confiance_color = "#f59e0b"
+        else:
+            confiance = "Faible"
+            confiance_color = "#ef4444"
+
+        return {
+            "prediction":    prediction_principale["orientation"],
+            "proba":         prediction_principale["proba"],
+            "couleur":       prediction_principale.get("couleur", "#3b82f6"),
+            "orientations":  orientations,
+            "duree_mediane": {"minutes": round(duree_med), "affichage": duree_str},
+            "nb_cas_similaires": n_cas,
+            "confiance":     confiance,
+            "confiance_color": confiance_color,
+            "profil": {
+                "age":      body.age,
+                "sexe":     body.sexe,
+                "triage":   body.niveau_triage,
+                "motif":    body.motif,
+                "groupe_age": body.groupe_age,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))

@@ -160,48 +160,74 @@ const Topbar: React.FC = () => {
   );
 };
 
+const TIMEOUT_MS = 20_000; // 20 secondes max d'attente
+
 const BackendLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { dark } = useTheme();
+  const { user } = useAuth();
   const [ready, setReady] = useState(false);
-  const [dots, setDots] = useState('');
+  const [timedOut, setTimedOut] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    const startedAt = Date.now();
+
+    // Timeout forcé
+    const forceTimer = setTimeout(() => {
+      if (!cancelled) { setTimedOut(true); setReady(true); }
+    }, TIMEOUT_MS);
+
+    // Compteur secondes
+    const ticker = setInterval(() => {
+      if (!cancelled) setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
     const check = async () => {
       try {
         const r = await axios.get('/api/status');
         if (r.data.ready) { if (!cancelled) setReady(true); return; }
       } catch {}
-      if (!cancelled) setTimeout(check, 3000);
+      if (!cancelled) setTimeout(check, 2000);
     };
     check();
-    const dotsInterval = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
-    return () => { cancelled = true; clearInterval(dotsInterval); };
+
+    return () => {
+      cancelled = true;
+      clearTimeout(forceTimer);
+      clearInterval(ticker);
+    };
   }, []);
 
-  if (ready) return <>{children}</>;
+  // Ne pas bloquer la page de login
+  if (!user || ready) return <>{children}</>;
 
-  const bg = dark ? '#0A0F1C' : '#F0F4FF';
+  const bg   = dark ? '#0A0F1C' : '#F0F4FF';
   const card = dark ? '#111827' : '#ffffff';
   const text = dark ? '#F1F5F9' : '#0F172A';
   const muted = dark ? '#64748b' : '#94a3b8';
+  const pct  = Math.min(100, Math.round((elapsed / (TIMEOUT_MS / 1000)) * 100));
 
   return (
     <div style={{ minHeight: '100vh', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: card, borderRadius: 20, padding: '48px 56px', textAlign: 'center', boxShadow: '0 8px 40px #0002', maxWidth: 380 }}>
+      <div style={{ background: card, borderRadius: 20, padding: '48px 56px', textAlign: 'center', boxShadow: '0 8px 40px #0002', maxWidth: 400 }}>
         <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: text, marginBottom: 8 }}>Chargement des données{dots}</div>
-        <div style={{ fontSize: 13, color: muted, lineHeight: 1.6, marginBottom: 24 }}>
-          Le serveur initialise les données<br/>des urgences (530 000 visites).<br/>Veuillez patienter quelques secondes.
+        <div style={{ fontSize: 18, fontWeight: 800, color: text, marginBottom: 8 }}>
+          Initialisation des données…
         </div>
-        <div style={{ height: 4, background: dark ? '#1e293b' : '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: '40%', background: 'linear-gradient(90deg,#2563eb,#7c3aed)', borderRadius: 2, animation: 'slide 1.5s ease-in-out infinite' }} />
+        <div style={{ fontSize: 13, color: muted, lineHeight: 1.6, marginBottom: 20 }}>
+          Chargement de 530 000 visites en mémoire.<br/>
+          Démarrage automatique dans <strong style={{ color: text }}>{Math.max(0, Math.ceil((TIMEOUT_MS / 1000) - elapsed))}s</strong>.
         </div>
-        <style>{`@keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }`}</style>
+        {/* Barre de progression réelle */}
+        <div style={{ height: 6, background: dark ? '#1e293b' : '#e2e8f0', borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#2563eb,#7c3aed)', borderRadius: 3, transition: 'width 1s linear' }} />
+        </div>
+        <div style={{ fontSize: 11, color: muted }}>{elapsed}s écoulées</div>
       </div>
     </div>
   );

@@ -283,27 +283,19 @@ def recommander_lits(
 
 @router.get("/api/lits/disponibles")
 def get_lits_disponibles(etablissement: str = ""):
-    """Retourne la liste des lits disponibles depuis la table lits."""
+    """Retourne tous les lits disponibles groupés par hôpital."""
     if not engine:
         raise HTTPException(503, "DB non disponible")
     try:
-        params: dict = {}
-        if etablissement:
-            q  = "SELECT numero_lit FROM lits WHERE statut='Disponible' AND etablissement=:e ORDER BY service, numero_lit"
-            params["e"] = etablissement
-        else:
-            q  = "SELECT numero_lit FROM lits WHERE statut='Disponible' ORDER BY etablissement, service, numero_lit"
         with engine.connect() as conn:
-            disponibles = [r[0] for r in conn.execute(text(q), params).fetchall()]
-            q2 = "SELECT numero_lit FROM lits WHERE statut='Occupe'"
-            if etablissement:
-                q2 += " AND etablissement=:e"
-            occupes = [r[0] for r in conn.execute(text(q2), params).fetchall()]
-            q3      = "SELECT COUNT(*) FROM lits" + (" WHERE etablissement=:e" if etablissement else "")
-            total   = conn.execute(text(q3), params).scalar()
+            rows = conn.execute(
+                text("SELECT numero_lit, etablissement FROM lits WHERE statut='Disponible' ORDER BY etablissement, numero_lit")
+            ).fetchall()
+            total = int(conn.execute(text("SELECT COUNT(*) FROM lits")).scalar() or 0)
+
+        disponibles = [{"numero_lit": r[0], "etablissement": r[1] or "Inconnu"} for r in rows]
         return {
             "disponibles": disponibles,
-            "occupes":     occupes,
             "total":       total,
             "nb_dispo":    len(disponibles),
         }

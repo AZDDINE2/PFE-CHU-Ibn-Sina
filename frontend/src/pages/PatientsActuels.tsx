@@ -71,7 +71,7 @@ const PatientsActuels: React.FC = () => {
   const [search, setSearch]             = useState('');
   const [lastRefresh, setLastRefresh]   = useState('');
   const [updating, setUpdating]         = useState<string | null>(null);
-  const [lits, setLits]                 = useState<string[]>([]);
+  const [lits, setLits]                 = useState<{ numero_lit: string; etablissement: string }[]>([]);
   const [litsEtab, setLitsEtab]         = useState<string>('');
   const [viewMode, setViewMode]         = useState<'accordion' | 'table'>('accordion');
   const [openEtabs, setOpenEtabs]       = useState<Set<string>>(new Set());
@@ -102,14 +102,20 @@ const PatientsActuels: React.FC = () => {
     } catch { setLoading(false); }
   }, []);
 
-  const loadLits = useCallback(async (etablissement: string) => {
-    if (etablissement === litsEtab && lits.length > 0) return;
+  const loadLits = useCallback(async () => {
+    if (lits.length > 0) return;
     try {
-      const r = await axios.get(`/api/lits/disponibles?etablissement=${encodeURIComponent(etablissement)}`);
+      const r = await axios.get('/api/lits/disponibles');
       setLits(r.data.disponibles || []);
-      setLitsEtab(etablissement);
     } catch { }
-  }, [lits.length, litsEtab]);
+  }, [lits.length]);
+
+  // Grouper les lits par hôpital pour les optgroups
+  const litsByEtab = lits.reduce((acc, l) => {
+    if (!acc[l.etablissement]) acc[l.etablissement] = [];
+    acc[l.etablissement].push(l.numero_lit);
+    return acc;
+  }, {} as Record<string, string[]>);
 
   useEffect(() => { load(); }, [load]);
   useAutoRefresh(load, 30000);
@@ -192,15 +198,24 @@ const PatientsActuels: React.FC = () => {
           <select
             disabled={updating === p.IPP}
             value={p.lit_numero || ''}
-            onFocus={() => loadLits(p.etablissement)}
+            onFocus={() => loadLits()}
             onChange={e => updateStatut(p.IPP, p.statut, e.target.value)}
-            style={{ width: 80, padding: '4px 6px', borderRadius: 6, fontSize: 12, border: `1px solid ${p.lit_numero ? '#3B82F6' : border}`, background: p.lit_numero ? '#EFF6FF' : cardBg, color: p.lit_numero ? '#1D4ED8' : muted, fontWeight: p.lit_numero ? 700 : 400, cursor: 'pointer' }}
+            style={{ width: 120, padding: '4px 6px', borderRadius: 6, fontSize: 12, border: `1px solid ${p.lit_numero ? '#3B82F6' : border}`, background: p.lit_numero ? '#EFF6FF' : cardBg, color: p.lit_numero ? '#1D4ED8' : muted, fontWeight: p.lit_numero ? 700 : 400, cursor: 'pointer' }}
           >
-            <option value="">— Lit —</option>
-            {p.lit_numero && !lits.includes(p.lit_numero) && (
-              <option value={p.lit_numero}>{p.lit_numero} ✓</option>
+            <option value="">— Choisir lit —</option>
+            {p.lit_numero && !lits.find(l => l.numero_lit === p.lit_numero) && (
+              <option value={p.lit_numero}>{p.lit_numero} (actuel)</option>
             )}
-            {lits.map(l => <option key={l} value={l}>{l}</option>)}
+            {Object.entries(litsByEtab).map(([hopital, nums]) => (
+              <optgroup key={hopital} label={hopital}>
+                {nums.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </optgroup>
+            ))}
+            {lits.length === 0 && (
+              <option disabled value="">Cliquer pour charger…</option>
+            )}
           </select>
         </td>
         <td style={{ padding: '10px 14px' }}>
