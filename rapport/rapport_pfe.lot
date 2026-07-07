@@ -1,36 +1,60 @@
 \babel@toc {french}{}\relax 
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {1.1}{\ignorespaces Établissements du réseau CHU Ibn Sina}}{17}{table.caption.6}%
-\contentsline {table}{\numberline {1.2}{\ignorespaces Besoins fonctionnels identifiés}}{18}{table.caption.7}%
-\contentsline {table}{\numberline {1.3}{\ignorespaces Stack technologique complète du projet}}{20}{table.caption.8}%
-\contentsline {table}{\numberline {1.4}{\ignorespaces Planning du projet -- Diagramme de Gantt simplifié}}{21}{table.caption.9}%
-\contentsline {table}{\numberline {1.5}{\ignorespaces Difficultés techniques rencontrées et solutions apportées}}{22}{table.caption.11}%
-\contentsline {table}{\numberline {1.6}{\ignorespaces Comparaison des solutions BI hospitalières existantes}}{23}{table.caption.12}%
+\contentsline {table}{\numberline {1.1}{\ignorespaces Établissements du réseau CHU Ibn Sina}}{4}{table.caption.8}%
+\contentsline {table}{\numberline {1.2}{\ignorespaces Besoins fonctionnels identifiés}}{5}{table.caption.9}%
+\contentsline {table}{\numberline {1.3}{\ignorespaces Stack technologique complète du projet}}{7}{table.caption.10}%
+\contentsline {table}{\numberline {1.4}{\ignorespaces Planning du projet — Diagramme de Gantt avec dépendances (12 semaines)}}{8}{table.caption.11}%
+\contentsline {table}{\numberline {1.5}{\ignorespaces Difficultés techniques rencontrées et solutions apportées}}{9}{table.caption.13}%
+\contentsline {table}{\numberline {1.6}{\ignorespaces Comparaison des solutions BI hospitalières existantes}}{10}{table.caption.14}%
+\contentsline {table}{\numberline {1.7}{\ignorespaces Impact économique estimé de la solution — CHU Ibn Sina}}{11}{table.caption.15}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {2.1}{\ignorespaces Caractéristiques du fichier source}}{26}{table.caption.13}%
-\contentsline {table}{\numberline {2.2}{\ignorespaces Règles de qualité appliquées en couche Silver}}{29}{table.caption.15}%
-\contentsline {table}{\numberline {2.3}{\ignorespaces Colonnes dérivées calculées en couche Gold}}{31}{table.caption.16}%
-\contentsline {table}{\numberline {2.4}{\ignorespaces Bilan quantitatif du pipeline ETL}}{33}{table.caption.17}%
+\contentsline {table}{\numberline {2.1}{\ignorespaces Caractéristiques du fichier source}}{14}{table.caption.16}%
+\contentsline {table}{\numberline {2.2}{\ignorespaces Propriétés de la couche Bronze}}{16}{table.caption.18}%
+\contentsline {table}{\numberline {2.3}{\ignorespaces Règles de qualité appliquées en couche Silver}}{16}{table.caption.19}%
+\contentsline {table}{\numberline {2.4}{\ignorespaces Colonnes dérivées calculées en couche Gold}}{17}{table.caption.20}%
+\contentsline {table}{\numberline {2.5}{\ignorespaces Modes de déclenchement du pipeline ETL}}{18}{table.caption.21}%
+\contentsline {table}{\numberline {2.6}{\ignorespaces Bilan quantitatif du pipeline ETL}}{18}{table.caption.22}%
+\contentsline {table}{\numberline {2.7}{\ignorespaces Métriques de qualité des données — résultats des règles de validation}}{19}{table.caption.23}%
+\contentsline {table}{\numberline {2.8}{\ignorespaces Temps d'exécution mesurés par couche ETL (530~914 lignes)}}{19}{table.caption.24}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {3.1}{\ignorespaces Tables de la base de données MySQL -- CHU Ibn Sina}}{35}{table.caption.18}%
-\contentsline {table}{\numberline {3.2}{\ignorespaces Statistiques descriptives -- Table urgences}}{35}{table.caption.19}%
-\contentsline {table}{\numberline {3.3}{\ignorespaces Distribution par niveau de triage}}{36}{table.caption.20}%
-\contentsline {table}{\numberline {3.4}{\ignorespaces Distribution par orientation à la sortie}}{36}{table.caption.21}%
-\contentsline {table}{\numberline {3.5}{\ignorespaces Top 10 des motifs de consultation aux urgences}}{37}{table.caption.22}%
-\contentsline {table}{\numberline {3.6}{\ignorespaces Dimensions analytiques du modèle Gold}}{38}{table.caption.24}%
-\contentsline {table}{\numberline {3.7}{\ignorespaces KPIs globaux -- définitions et formules}}{38}{table.caption.25}%
-\contentsline {table}{\numberline {3.8}{\ignorespaces KPIs temps réel -- page Patients Actuels}}{39}{table.caption.26}%
+\contentsline {table}{\numberline {3.1}{\ignorespaces Tables de la base de données MySQL -- CHU Ibn Sina}}{21}{table.caption.25}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Statistiques descriptives -- Table urgences}}{22}{table.caption.26}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Distribution par niveau de triage}}{22}{table.caption.27}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces Distribution par orientation à la sortie}}{23}{table.caption.28}%
+\contentsline {table}{\numberline {3.5}{\ignorespaces Matrice de corrélation entre les variables clés (coefficients de Spearman)}}{24}{table.caption.29}%
+\contentsline {table}{\numberline {3.6}{\ignorespaces Top 10 des motifs de consultation aux urgences}}{24}{table.caption.30}%
+\contentsline {table}{\numberline {3.7}{\ignorespaces Dimensions analytiques du modèle Gold}}{25}{table.caption.32}%
+\contentsline {table}{\numberline {3.8}{\ignorespaces KPIs globaux -- définitions et formules}}{26}{table.caption.33}%
+\contentsline {table}{\numberline {3.9}{\ignorespaces KPIs temps réel -- page Patients Actuels}}{26}{table.caption.34}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{\ignorespaces Objectifs des modèles Machine Learning}}{40}{table.caption.27}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces Features utilisées par les modèles supervisés}}{41}{table.caption.28}%
-\contentsline {table}{\numberline {4.3}{\ignorespaces Comparatif des performances des modèles ML}}{45}{table.caption.30}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces Objectifs des modèles Machine Learning}}{28}{table.caption.35}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Features utilisées par les modèles supervisés}}{29}{table.caption.36}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Variables catégorielles encodées avec LabelEncoder}}{30}{table.caption.37}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Stratégie de partitionnement train/test}}{30}{table.caption.38}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Comparaison avec les baselines simples (test 2025--2026)}}{31}{table.caption.39}%
+\contentsline {table}{\numberline {4.6}{\ignorespaces Hyperparamètres retenus pour XGBoost}}{31}{table.caption.40}%
+\contentsline {table}{\numberline {4.7}{\ignorespaces Hyperparamètres retenus pour Random Forest (orientation)}}{32}{table.caption.41}%
+\contentsline {table}{\numberline {4.8}{\ignorespaces Top 10 des variables les plus influentes — XGBoost et Random Forest}}{33}{table.caption.42}%
+\contentsline {table}{\numberline {4.9}{\ignorespaces Matrice de confusion Random Forest (jeu de test 2025--2026, 5 classes)}}{34}{table.caption.43}%
+\contentsline {table}{\numberline {4.10}{\ignorespaces Comparatif des performances des modèles ML}}{35}{table.caption.45}%
+\contentsline {table}{\numberline {4.11}{\ignorespaces Modèles ML chargés au démarrage du backend}}{36}{table.caption.46}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {5.1}{\ignorespaces Organisation du code frontend React}}{47}{table.caption.31}%
-\contentsline {table}{\numberline {5.2}{\ignorespaces Technologies frontend et justification}}{48}{table.caption.32}%
-\contentsline {table}{\numberline {5.3}{\ignorespaces Rôles et permissions dans l'application}}{48}{table.caption.33}%
+\contentsline {table}{\numberline {5.1}{\ignorespaces Organisation du code frontend React}}{37}{table.caption.47}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Technologies frontend et justification}}{38}{table.caption.48}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Rôles et permissions dans l'application}}{38}{table.caption.49}%
+\contentsline {table}{\numberline {5.4}{\ignorespaces Justification des choix UX/UI}}{39}{table.caption.50}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {6.1}{\ignorespaces Comparaison des temps de chargement}}{64}{table.caption.48}%
-\contentsline {table}{\numberline {6.2}{\ignorespaces Temps de réponse mesurés pour les principales API}}{64}{table.caption.49}%
-\contentsline {table}{\numberline {6.3}{\ignorespaces URLs d'accès à l'application}}{66}{table.caption.50}%
-\contentsline {table}{\numberline {6.4}{\ignorespaces Scénarios de test et résultats}}{67}{table.caption.51}%
-\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Flux d'authentification JWT (RFC 7519)}}{52}{table.caption.65}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Mécanisme de hachage des mots de passe}}{53}{table.caption.66}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces Filtrage des données par établissement selon le rôle}}{54}{table.caption.67}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces Comparaison des temps de chargement}}{54}{table.caption.68}%
+\contentsline {table}{\numberline {6.5}{\ignorespaces Temps de réponse mesurés pour les principales API}}{55}{table.caption.69}%
+\contentsline {table}{\numberline {6.6}{\ignorespaces Résultats du test de charge Locust — scénario pic de journée}}{55}{table.caption.70}%
+\contentsline {table}{\numberline {6.7}{\ignorespaces Services définis dans docker-compose.yml}}{56}{table.caption.71}%
+\contentsline {table}{\numberline {6.8}{\ignorespaces Commandes Docker Compose de gestion des conteneurs}}{56}{table.caption.72}%
+\contentsline {table}{\numberline {6.9}{\ignorespaces URLs d'accès à l'application}}{57}{table.caption.73}%
+\contentsline {table}{\numberline {6.10}{\ignorespaces Politique de sauvegarde MySQL — CHU Ibn Sina}}{57}{table.caption.74}%
+\contentsline {table}{\numberline {6.11}{\ignorespaces Configuration HTTPS recommandée pour le déploiement en production}}{58}{table.caption.75}%
+\contentsline {table}{\numberline {6.12}{\ignorespaces Scénarios de test et résultats}}{59}{table.caption.76}%
+\contentsline {table}{\numberline {6.13}{\ignorespaces Retours utilisateurs CHU — problèmes signalés, corrections et validation}}{60}{table.caption.77}%
+\contentsline {table}{\numberline {6.14}{\ignorespaces Arborescence complète du projet PFE}}{65}{table.6.14}%

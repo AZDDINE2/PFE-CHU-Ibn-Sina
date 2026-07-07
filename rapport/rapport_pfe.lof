@@ -1,27 +1,26 @@
 \babel@toc {french}{}\relax 
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {1.1}{\ignorespaces Architecture globale de la solution}}{21}{figure.caption.10}%
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Architecture globale de la solution}}{8}{figure.caption.12}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {2.1}{\ignorespaces Architecture Medallion du pipeline ETL -- Bronze / Silver / Gold}}{27}{figure.caption.14}%
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Architecture Medallion du pipeline ETL -- Bronze / Silver / Gold}}{15}{figure.caption.17}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {3.1}{\ignorespaces Structure de la base de données MySQL -- CHU Ibn Sina}}{37}{figure.caption.23}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Structure de la base de données MySQL -- CHU Ibn Sina}}{25}{figure.caption.31}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Comparaison des métriques de performance des modèles ML}}{44}{figure.caption.29}%
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Comparaison des métriques de performance des modèles ML --- L'accuracy de 87,3\,\% du Random Forest est satisfaisante pour une tâche de classification à 5 classes}}{35}{figure.caption.44}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {5.1}{\ignorespaces Page de connexion -- Authentification JWT avec indicateur de session}}{49}{figure.caption.34}%
-\contentsline {figure}{\numberline {5.2}{\ignorespaces Page KPIs Globaux -- Vue d'ensemble des indicateurs de performance}}{49}{figure.caption.35}%
-\contentsline {figure}{\numberline {5.3}{\ignorespaces Page Analyse Temporelle -- Heatmap et distributions multi-dimensionnelles}}{50}{figure.caption.36}%
-\contentsline {figure}{\numberline {5.4}{\ignorespaces Prédiction d'orientation -- Distribution des orientations basée sur les cas historiques similaires}}{51}{figure.caption.37}%
-\contentsline {figure}{\numberline {5.5}{\ignorespaces Modules de prévision des flux de patients}}{52}{figure.caption.38}%
-\contentsline {figure}{\numberline {5.6}{\ignorespaces Planification par date -- Recommandations automatiques RH et lits}}{52}{figure.caption.39}%
-\contentsline {figure}{\numberline {5.7}{\ignorespaces Vue Ressources Humaines -- Corrélation flux patients / personnel disponible par service}}{53}{figure.caption.40}%
-\contentsline {figure}{\numberline {5.8}{\ignorespaces Page Soins Médicaux -- Analyse des coûts et répartition des financements}}{54}{figure.caption.41}%
-\contentsline {figure}{\numberline {5.9}{\ignorespaces Page Patients Actuels -- Suivi temps réel avec KPIs et attribution de lits}}{55}{figure.caption.42}%
-\contentsline {figure}{\numberline {5.10}{\ignorespaces Formulaire d'admission -- Saisie complète d'un nouveau patient aux urgences}}{56}{figure.caption.43}%
-\contentsline {figure}{\numberline {5.11}{\ignorespaces Page Gestion des Lits -- Inventaire et taux d'occupation en temps réel}}{57}{figure.caption.44}%
-\contentsline {figure}{\numberline {5.12}{\ignorespaces Page Gestion du Personnel -- Annuaire et répartition par spécialité}}{57}{figure.caption.45}%
-\contentsline {figure}{\numberline {5.13}{\ignorespaces Pages 11 à 15 du tableau de bord}}{58}{figure.caption.46}%
-\contentsline {figure}{\numberline {5.14}{\ignorespaces Architecture générale -- Docker + FastAPI + React + MySQL + Cache Parquet}}{59}{figure.caption.47}%
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Page de connexion -- Authentification JWT avec indicateur de session}}{40}{figure.caption.51}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Page KPIs Globaux -- Vue d'ensemble des indicateurs de performance}}{41}{figure.caption.52}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Page Analyse Temporelle -- Heatmap et distributions multi-dimensionnelles}}{42}{figure.caption.53}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Prédiction d'orientation -- Distribution des orientations basée sur les cas historiques similaires}}{43}{figure.caption.54}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Modules de prévision des flux de patients}}{43}{figure.caption.55}%
+\contentsline {figure}{\numberline {5.6}{\ignorespaces Planification par date -- Recommandations automatiques RH et lits}}{44}{figure.caption.56}%
+\contentsline {figure}{\numberline {5.7}{\ignorespaces Vue Ressources Humaines -- Corrélation flux patients / personnel disponible par service}}{45}{figure.caption.57}%
+\contentsline {figure}{\numberline {5.8}{\ignorespaces Page Soins Médicaux -- Analyse des coûts et répartition des financements}}{46}{figure.caption.58}%
+\contentsline {figure}{\numberline {5.9}{\ignorespaces Page Patients Actuels -- Suivi temps réel avec KPIs et attribution de lits}}{47}{figure.caption.59}%
+\contentsline {figure}{\numberline {5.10}{\ignorespaces Formulaire d'admission -- Saisie complète d'un nouveau patient aux urgences}}{48}{figure.caption.60}%
+\contentsline {figure}{\numberline {5.11}{\ignorespaces Page Gestion des Lits -- Inventaire et taux d'occupation en temps réel}}{48}{figure.caption.61}%
+\contentsline {figure}{\numberline {5.12}{\ignorespaces Page Gestion du Personnel -- Annuaire et répartition par spécialité}}{49}{figure.caption.62}%
+\contentsline {figure}{\numberline {5.13}{\ignorespaces Pages 11 à 15 du tableau de bord}}{50}{figure.caption.63}%
+\contentsline {figure}{\numberline {5.14}{\ignorespaces Architecture générale de la solution -- Docker Compose : React/Nginx + FastAPI + MySQL + Cache Parquet + Modèles ML}}{51}{figure.caption.64}%
 \addvspace {10\p@ }
-\addvspace {10\p@ }
-\contentsline {figure}{\numberline {A.1}{\ignorespaces Galerie des pages du tableau de bord CHU Ibn Sina}}{76}{figure.caption.54}%
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Galerie des pages du tableau de bord CHU Ibn Sina}}{69}{figure.caption.81}%
