@@ -66,3 +66,6 @@ rapports/
 
 # ── pgAdmin ───────────────────────────────────────────────
 pgadmin/
+
+# ── Large root data files ───────────────────────────────
+data/*.csv
